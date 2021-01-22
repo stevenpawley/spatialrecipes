@@ -1,0 +1,35 @@
+Package: spatialrecipes
+Type: Package
+Title: Preprocessing recipes for spatial data science
+Version: 0.1.0
+Authors@R: c(
+    person("Steven", "Pawley",
+    email = "dr.stevenpawley@gmail.com",
+    role = c("aut", "cre")))
+Maintainer: Steven Pawley <dr.stevenpawley@gmail.com>
+Description: A collection of preprocessing steps for use within the `tidymodels`
+    and `recipes` packages.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+URL: https://github.com/stevenpawley/spatialrecipes
+BugReports: https://github.com/stevenpawley/spatialrecipes/issues
+Depends:
+    R (>= 2.10),
+    recipes
+Imports:
+    generics,
+    tibble,
+    tune,
+    dials,
+    purrr,
+    rlang (>= 0.1.2),
+    magrittr,
+    dplyr,
+    nabor,
+    stats
+RoxygenNote: 7.1.1
+Suggests:
+    testthat,
+    roxygen2,
+    covr
