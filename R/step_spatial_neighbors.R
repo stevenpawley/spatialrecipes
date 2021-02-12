@@ -1,5 +1,5 @@
 #' Compute which points in `y` are the k-neighbors of `x`
-#' 
+#'
 #' If `x` and `y` represent identical datasets then the points where x[i] ==
 #' y[i] are not considered neighbors, i.e. the query point is not considered to
 #' be its own neighbor.
@@ -7,41 +7,39 @@
 #' @param formula A formula.
 #' @param x A data.frame of training data.
 #' @param y A data.frame of data to predict, can be the same as `x`.
-#' @param k An integer specifying the number of neighbours to use.
+#' @param k An integer specifying the number of neighbors to use.
 #'
 #' @return
 return_neighbours <- function(formula, x, y, k) {
-  # get response and term variables
-  target_variable <- formula %>%
-    rlang::f_lhs() %>%
+  target_variable <-
+    rlang::f_lhs(formula) %>%
     as.character()
   term_variables <- attr(terms(formula), "term.labels")
-  
+
   # split data
-  response_data <- x[[target_variable]]
   train_data <- x[term_variables]
   query_data <- y[term_variables]
-  
+
   if (identical(train_data, query_data)) {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k + 1)
     neighbors$nn.idx <- neighbors$nn.idx[, 2:ncol(neighbors$nn.idx)]
     neighbors$nn.dists <- neighbors$nn.dists[, 2:ncol(neighbors$nn.dists)]
-    
+
   } else {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k)
   }
-  
+
   # get values and distances of neighbours
   idx <- neighbors$nn.idx
   D <- neighbors$nn.dists
   W <- x[as.numeric(idx), ][[target_variable]]
   W <- matrix(W, ncol = k)
-  
+
   # return as tibble
   prefix <- paste("nn", target_variable, sep = "_")
   colnames(W) <- paste(prefix, 1:ncol(W), sep = "_")
   colnames(D) <- paste("dist", 1:ncol(D), sep = "_")
-  
+
   W <- as_tibble(W)
   D <- as_tibble(D)
 
@@ -50,7 +48,7 @@ return_neighbours <- function(formula, x, y, k) {
 
 
 #' Spatial si step
-#' 
+#'
 #' `step_spatial_si` creates a *specification* of a recipe step that will add a new
 #' 'si' features to a dataset based on the inverse distance-weighted mean of
 #' surrounding observations.
@@ -86,15 +84,15 @@ step_spatial_si <- function(
   columns = NULL,
   skip = FALSE,
   id = rand_id("spatial_si")) {
-  
+
   if (!"nabor" %in% installed.packages()[, 1])
     stop("step_infgain requires the package `nabor` to be installed")
-  
+
   terms <- ellipse_check(...)
-  
+
   if (neighbors <= 0)
     rlang::abort("`neighbors` should be greater than 0.")
-  
+
   recipes::add_step(
     recipe,
     step_spatial_si_new(
@@ -114,7 +112,7 @@ step_spatial_si <- function(
 
 # wrapper around 'step' function that sets the class of new step objects
 #' @importFrom recipes step
-step_spatial_si_new <- function(terms, role, trained, outcome, neighbors, 
+step_spatial_si_new <- function(terms, role, trained, outcome, neighbors,
                                  data, columns, skip, id) {
   recipes::step(
     subclass = "spatial_si",
@@ -132,11 +130,11 @@ step_spatial_si_new <- function(terms, role, trained, outcome, neighbors,
 
 
 prep.step_spatial_si <- function(x, training, info = NULL, ...) {
-  
+
   # First translate the terms argument into column name
   col_names <- terms_select(terms = x$terms, info = info)
   outcome_name <- terms_select(x$outcome, info = info)
-  
+
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE
   step_spatial_si_new(
@@ -154,11 +152,11 @@ prep.step_spatial_si <- function(x, training, info = NULL, ...) {
 
 
 bake.step_spatial_si <- function(object, new_data, ...) {
-  
+
   f <- as.formula(
     paste(object$outcome, paste(object$columns, collapse = " + "), sep = " ~ ")
   )
-  
+
   lags <-
     return_neighbours(
       formula = f,
@@ -166,7 +164,7 @@ bake.step_spatial_si <- function(object, new_data, ...) {
       y = new_data,
       k = object$neighbors
     )
-  
+
   new_data <- dplyr::bind_cols(new_data, lags)
   new_data
 }

@@ -1,32 +1,43 @@
-gaussian_kernel <- function(W, k) {
-  alpha <- 1 / (2 * (k + 1))
-  qua <- abs(qnorm(alpha))
-  W <- W * qua
-  W <- dnorm(x = W, sd = 1)
-  W
+max_normalization <- function(X) {
+  nvars <- dim(X)[2]
+  z <- X[, nvars]
+  X / z
 }
 
-optimal_kernel <- function(W, k, d) {
-  optKernel <- function(k, d = 1)
-    1 / k * (1 + d/2 - d / (2 * k^(2 / d)) * ((1:k)^(1 + 2 / d) - (0:(k - 1))^(1 + 2 / d)))
-  p <- dim(W)[1]
-  W <- rep(optKernel(k, d = d), each = p)
-  W <- matrix(W, nrow = p, ncol = k)
-  W
+l1_normalization <- function(X) {
+  z <- rowSums(X)
+  X / z
 }
 
-lag_train <- function(formula, x, y, k, weight_func, dist = FALSE) {
-  # get response and term variables
-  target_variable <- formula %>%
-    rlang::f_lhs() %>%
+l2_normalization <- function(X) {
+  z <- sqrt(rowSums(X^2))
+  X / z
+}
+
+gaussian_kernel <- function(X, std = 2) {
+  exp(-X^2 / std^2)
+}
+
+# gaussian_kernel <- function(W, k) {
+#   alpha <- 1 / (2 * (k + 1))
+#   qua <- abs(qnorm(alpha))
+#   W <- W * qua
+#   W <- dnorm(x = W, sd = 1)
+#   W
+# }
+
+lag_train <- function(formula, x, y, k, weight_func, norm = "l2") {
+  target_variable <-
+    rlang::f_lhs(formula) %>%
     as.character()
   term_variables <- attr(terms(formula), "term.labels")
 
   # split data
-  response_data <- x[[target_variable]]
   train_data <- x[term_variables]
   query_data <- y[term_variables]
 
+  # for training use k[2:k+1] i.e. use only neighbouring points but not the
+  # point itself
   if (identical(train_data, query_data)) {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k + 1)
     neighbors$nn.idx <- neighbors$nn.idx[, 2:ncol(neighbors$nn.idx)]
@@ -40,43 +51,34 @@ lag_train <- function(formula, x, y, k, weight_func, dist = FALSE) {
   neighbor_ids <- neighbors$nn.idx
   D <- neighbors$nn.dists
 
-  # create initial row-standardized weights from distances
-  maxdist <- D[, k]
-  maxdist[maxdist < 1.0e-6] <- 1.0e-6
-  W <- D / maxdist
-  W <- pmin(W, 1 - (1e-6))
-  W <- pmax(W, 1e-6)
-  d <- length(term_variables)
+  # create initial row-normalized weights from distances
+  W <- switch(
+    norm,
+    l1 = l1_normalization(D),
+    l2 = l2_normalization(D),
+    max = max_normalization(D)
+  )
 
   # get values of neighbors
   neighbor_vals <- x[as.numeric(neighbor_ids), ][[target_variable]]
   neighbor_vals <- matrix(neighbor_vals, ncol = k)
 
-  # calculate weights (functions from kknn)
-  if (weight_func == "rank") W <- (k + 1) - t(apply(D, 1, rank))
-  if (weight_func == "inv") W <- 1/W
-  if (weight_func == "triangular") W <- 1 - W
-  if (weight_func == "rectangular") W <- matrix(1, nrow = nrow(neighbor_vals), ncol = k)
-  if (weight_func == "epanechnikov") W <- 0.75*(1 - W^2)
-  if (weight_func == "biweight") W <- dbeta((W + 1) / 2, 3, 3)
-  if (weight_func == "triweight") W <- dbeta((W + 1) / 2, 4, 4)
-  if (weight_func == "cos") W <- cos(W * pi / 2)
-  if (weight_func == "triweights") W <- 1
-  if (weight_func == "gaussian") W <- gaussian_kernel(W, k)
-  if (weight_func == "optimal") W <- optimal_kernel(W, k, d)
+  # calculate weights
+  W <- switch(
+    weight_func,
+    inv = 1 / W,
+    rectangular = matrix(1, nrow = nrow(neighbor_vals), ncol = k),
+    cos = cos(W * pi / 2),
+    gaussian = gaussian_kernel(W, k)
+  )
 
   # calculate weighted mean of neighbors
-  fitted <- rowSums(W*neighbor_vals) / pmax(rowSums(W))
+  fitted <- rowSums(W * neighbor_vals) / pmax(rowSums(W))
 
   new_feature_name <- paste(target_variable, "lag", k, weight_func, sep = "_")
+
   fitted <- tibble(fitted) %>%
     rlang::set_names(new_feature_name)
-
-  if (dist) {
-    W <- matrix(1, nrow = nrow(D), ncol = k)
-    new_feature_name <- paste(target_variable, "dist", k, sep = "_")
-    fitted[[new_feature_name]] <- rowSums(W*D) / pmax(rowSums(W))
-  }
 
   fitted
 }
@@ -105,8 +107,7 @@ lag_train <- function(formula, x, y, k, weight_func, dist = FALSE) {
 #'   the distances between samples. Valid choices are: "rectangular",
 #'   "triangular", "epanechnikov", "biweight", "tri-weight", "cos", "inv",
 #'   "gaussian", "rank", and "optimal".
-#' @param dist Whether to also return the weighted mean of the distances to the
-#'   neighbours.
+#' @param norm Row-normalization method. Either "l1", "l2", or "max".
 #' @param data Used internally to store the training data.
 #' @param skip A logical to skip training.
 #' @param id An identifier for the step. If omitted then this is generated
@@ -129,7 +130,7 @@ step_spatial_lag <- function(
   trained = FALSE,
   neighbors = NA,
   weight_func = NULL,
-  dist = FALSE,
+  norm = "l2",
   data = NULL,
   columns = NULL,
   skip = FALSE,
@@ -142,6 +143,12 @@ step_spatial_lag <- function(
   if (neighbors <= 0)
     rlang::abort("`neighbors` should be greater than 0.")
 
+  if (!norm %in% c("l1", "l2", "max"))
+    rlang::abort("`norm` should be either 'l1', 'l2' or 'max")
+
+  if (!weight_func %in% c("inv", "gaussian", "rectangular", "cos"))
+    rlang::abort("`weight_func` should be either 'inv', 'gaussian', 'cos', or 'rectangular'")
+
   recipes::add_step(
     recipe,
     step_spatial_lag_new(
@@ -151,7 +158,7 @@ step_spatial_lag <- function(
       role = role,
       neighbors = neighbors,
       weight_func = weight_func,
-      dist = dist,
+      norm = norm,
       data = data,
       columns = columns,
       skip = skip,
@@ -162,7 +169,7 @@ step_spatial_lag <- function(
 
 # wrapper around 'step' function that sets the class of new step objects
 step_spatial_lag_new <- function(terms, role, trained, outcome, neighbors,
-                                 weight_func, dist, data, columns, skip, id) {
+                                 weight_func, norm, data, columns, skip, id) {
   recipes::step(
     subclass = "spatial_lag",
     terms = terms,
@@ -171,7 +178,7 @@ step_spatial_lag_new <- function(terms, role, trained, outcome, neighbors,
     outcome = outcome,
     neighbors = neighbors,
     weight_func = weight_func,
-    dist = dist,
+    norm = norm,
     data = data,
     columns = columns,
     skip = skip,
@@ -194,7 +201,7 @@ prep.step_spatial_lag <- function(x, training, info = NULL, ...) {
     outcome = outcome_name,
     neighbors = x$neighbors,
     weight_func = x$weight_func,
-    dist = x$dist,
+    norm = x$norm,
     data = training,
     columns = col_names,
     skip = x$skip,
@@ -215,7 +222,7 @@ bake.step_spatial_lag <- function(object, new_data, ...) {
       y = new_data,
       k = object$neighbors,
       weight_func = object$weight_func,
-      dist = object$dist
+      norm = object$norm
     )
 
   new_data <- dplyr::bind_cols(new_data, lags)
@@ -248,6 +255,7 @@ tidy.step_spatial_lag <- function(x, ...) {
   res$id <- x$id
   res$neighbors <- x$neighbors
   res$weight_func <- x$weight_func
+  res$norm <- x$norm
   res
 }
 
@@ -255,10 +263,11 @@ tidy.step_spatial_lag <- function(x, ...) {
 #' @export
 tunable.step_spatial_lag <- function(x, ...) {
   tibble(
-    name = c("neighbors", "weight_func"),
+    name = c("neighbors", "weight_func", "norm"),
     call_info = list(
       list(pkg = "dials", fun = "neighbors", range = c(1, 10)),
-      list(pkg = "dials", fun = "weight_func")
+      list(pkg = "dials", fun = "weight_func"),
+      list(pkg = "spatialrecipes", fun = "norm")
     ),
     source = "recipe",
     component = "step_spatial_lag",
