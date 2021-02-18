@@ -13,7 +13,7 @@ step_spatial_lag(
   trained = FALSE,
   neighbors = NA,
   weight_func = NULL,
-  norm = "l2",
+  dist_power = NA,
   data = NULL,
   columns = NULL,
   skip = FALSE,
@@ -43,11 +43,9 @@ distance will be used as a predictor in a model.}
 weighting.}
 
 \item{weight_func}{A single character for the kernel function used to weight
-the distances between samples. Valid choices are: "rectangular",
-"triangular", "epanechnikov", "biweight", "tri-weight", "cos", "inv",
-"gaussian", "rank", and "optimal".}
+the distances between samples.}
 
-\item{norm}{Row-normalization method. Either "l1", "l2", or "max".}
+\item{dist_power}{Power function for "inv".}
 
 \item{data}{Used internally to store the training data.}
 
@@ -71,7 +69,18 @@ surrounding observations.
 No details yet!
 }
 \examples{
-No examples yet!
+library(modeldata)
+library(recipes)
+library(spatialrecipes)
+data(ames)
+
+rec_obj <- ames \%>\%
+recipe(Sale_Price ~ Latitude + Longitude) \%>\%
+step_spatial_lag(Latitude, Longitude, outcome = "Sale_Price", neighbors = 3,
+                 weight_func = "inv", dist_power = 2)
+
+prepped <- prep(rec_obj)
+juice(prepped)
 }
 \concept{preprocessing}
 \keyword{datagen}

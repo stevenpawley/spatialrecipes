@@ -27,7 +27,8 @@ Imports:
     magrittr,
     dplyr,
     nabor,
-    stats
+    stats,
+    collapse
 RoxygenNote: 7.1.1
 Suggests:
     testthat,
