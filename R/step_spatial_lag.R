@@ -41,11 +41,14 @@ lag_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
     rectangular = matrix(1, nrow = nrow(neighbor_vals), ncol = k),
     gaussian = gaussian_kernel(W, dist_power)
   )
-  W <- W / rowSums(W)
 
   # calculate weighted mean/mode of neighbors
   if (inherits(x[[target_variable]], "numeric")) {
-    fitted <- rowSums(neighbor_vals * W)
+    # W <- W / rowSums(W)
+    # fitted <- rowSums(neighbor_vals * W)
+
+    fitted <- sapply(seq_len(nrow(W)), function(i)
+      weighted.mean(x = neighbor_vals[i,], w = W[i,]))
 
   } else {
     fitted <- sapply(seq_len(nrow(W)), function(i) {
@@ -251,7 +254,7 @@ tunable.step_spatial_lag <- function(x, ...) {
     name = c("neighbors", "weight_func", "dist_power"),
     call_info = list(
       list(pkg = "dials", fun = "neighbors", range = c(1, 10)),
-      list(pkg = "dials", fun = "weight_func", values = dials::values_weight_func),
+      list(pkg = "dials", fun = "weight_func"),
       list(pkg = "dials", fun = "dist_power", range = c(1, 2))
     ),
     source = "recipe",
