@@ -14,7 +14,7 @@ step_spatial_si(
   data = NULL,
   columns = NULL,
   skip = FALSE,
-  id = rand_id("spatial_si")
+  id = recipes::rand_id("spatial_si")
 )
 }
 \arguments{
@@ -34,7 +34,7 @@ that resulting distance will be used as a predictor in a model.}
 
 \item{trained}{A logical that will be updated once the step has been trained.}
 
-\item{neighbors}{The number of closest neighbours to use in the distance
+\item{neighbors}{The number of closest neighbors to use in the distance
 weighting.}
 
 \item{data}{Used internally to store the training data.}

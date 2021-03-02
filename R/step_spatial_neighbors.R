@@ -1,19 +1,8 @@
-#' Compute which points in `y` are the k-neighbors of `x`
-#'
-#' If `x` and `y` represent identical datasets then the points where x[i] ==
-#' y[i] are not considered neighbors, i.e. the query point is not considered to
-#' be its own neighbor.
-#'
-#' @param formula A formula.
-#' @param x A data.frame of training data.
-#' @param y A data.frame of data to predict, can be the same as `x`.
-#' @param k An integer specifying the number of neighbors to use.
-#'
-#' @return
 return_neighbours <- function(formula, x, y, k) {
   target_variable <-
     rlang::f_lhs(formula) %>%
     as.character()
+
   term_variables <- attr(terms(formula), "term.labels")
 
   # split data
@@ -29,7 +18,7 @@ return_neighbours <- function(formula, x, y, k) {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k)
   }
 
-  # get values and distances of neighbours
+  # get values and distances of neighbors
   idx <- neighbors$nn.idx
   D <- neighbors$nn.dists
   W <- x[as.numeric(idx), ][[target_variable]]
@@ -64,7 +53,7 @@ return_neighbours <- function(formula, x, y, k) {
 #'  role should be assigned?. By default, the function assumes
 #'  that resulting distance will be used as a predictor in a model.
 #' @param trained A logical that will be updated once the step has been trained.
-#' @param neighbors The number of closest neighbours to use in the distance
+#' @param neighbors The number of closest neighbors to use in the distance
 #'   weighting.
 #' @param data Used internally to store the training data.
 #' @param skip A logical to skip training.
@@ -83,12 +72,13 @@ step_spatial_si <- function(
   data = NULL,
   columns = NULL,
   skip = FALSE,
-  id = rand_id("spatial_si")) {
+  id = recipes::rand_id("spatial_si")) {
 
   if (!"nabor" %in% installed.packages()[, 1])
-    stop("step_infgain requires the package `nabor` to be installed")
+    stop("step_spatial_si requires the package `nabor` to be installed")
 
-  terms <- ellipse_check(...)
+  recipes::recipes_pkg_check("nabor")
+  terms <- recipes::ellipse_check(...)
 
   if (neighbors <= 0)
     rlang::abort("`neighbors` should be greater than 0.")
@@ -111,7 +101,6 @@ step_spatial_si <- function(
 
 
 # wrapper around 'step' function that sets the class of new step objects
-#' @importFrom recipes step
 step_spatial_si_new <- function(terms, role, trained, outcome, neighbors,
                                  data, columns, skip, id) {
   recipes::step(
@@ -128,7 +117,7 @@ step_spatial_si_new <- function(terms, role, trained, outcome, neighbors,
   )
 }
 
-
+#' @export
 prep.step_spatial_si <- function(x, training, info = NULL, ...) {
 
   # First translate the terms argument into column name
@@ -150,15 +139,14 @@ prep.step_spatial_si <- function(x, training, info = NULL, ...) {
   )
 }
 
-
+#' @export
 bake.step_spatial_si <- function(object, new_data, ...) {
 
   f <- as.formula(
     paste(object$outcome, paste(object$columns, collapse = " + "), sep = " ~ ")
   )
 
-  lags <-
-    return_neighbours(
+  lags <- return_neighbours(
       formula = f,
       x = object$data,
       y = new_data,
@@ -169,7 +157,7 @@ bake.step_spatial_si <- function(object, new_data, ...) {
   new_data
 }
 
-
+#' @export
 tidy.step_spatial_si <- function(x, ...) {
   res <- tibble::tibble(
     neighbors = x$neighbors
@@ -177,7 +165,7 @@ tidy.step_spatial_si <- function(x, ...) {
   res
 }
 
-
+#' @export
 tunable.step_spatial_si <- function(x, ...) {
   tibble::tibble(
     name = c("neighbors"),

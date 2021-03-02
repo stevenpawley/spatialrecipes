@@ -247,18 +247,24 @@ tidy.step_spatial_lag <- function(x, ...) {
   res
 }
 
-
+#' @rdname tunable.step
 #' @export
 tunable.step_spatial_lag <- function(x, ...) {
-  tibble(
+  tibble::tibble(
     name = c("neighbors", "weight_func", "dist_power"),
     call_info = list(
-      list(pkg = "dials", fun = "neighbors", range = c(1, 10)),
-      list(pkg = "dials", fun = "weight_func"),
+      list(pkg = "dials", fun = "neighbors", range = c(1L, 10L)),
+      list(pkg = "dials", fun = "weight_func", values = c("rectangular", "inv", "gaussian")),
       list(pkg = "dials", fun = "dist_power", range = c(1, 2))
     ),
     source = "recipe",
     component = "step_spatial_lag",
     component_id = x$id
   )
+}
+
+#' @rdname required_pkgs.step
+#' @export
+required_pkgs.step_spatial_lag <- function(x, ...) {
+  c("nabor")
 }
