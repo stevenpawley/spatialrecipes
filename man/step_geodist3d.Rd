@@ -10,11 +10,11 @@ step_geodist3d(
   lat = NULL,
   lon = NULL,
   z = NULL,
-  role = "predictor",
-  trained = FALSE,
   ref_lat = NULL,
   ref_lon = NULL,
   ref_z = NULL,
+  role = "predictor",
+  trained = FALSE,
   log = FALSE,
   name = "geo_dist3d",
   columns = NULL,
@@ -28,12 +28,12 @@ step_geodist3d(
 \item{lon, lat, z}{Selector functions to choose which variables are
 affected by the step. See selections() for more details.}
 
+\item{ref_lon, ref_lat, ref_z}{Single numeric values for the location
+of the reference point.}
+
 \item{role}{or model term created by this step, what analysis
 role should be assigned?. By default, the function assumes
 that resulting distance will be used as a predictor in a model.}
-
-\item{ref_lon, ref_lat, ref_z}{Single numeric values for the location
-of the reference point.}
 
 \item{log}{A logical: should the distance be transformed by
 the natural log function?}

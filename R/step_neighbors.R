@@ -22,12 +22,15 @@ return_neighbours <- function(formula, x, y, k) {
   idx <- neighbors$nn.idx
   D <- neighbors$nn.dists
   W <- x[as.numeric(idx), ][[target_variable]]
+
   W <- matrix(W, ncol = k)
+  D <- matrix(D, ncol = k)
 
   # return as tibble
   prefix <- paste("nn", target_variable, sep = "_")
+  prefix_dist <- paste("dist", target_variable, sep = "_")
   colnames(W) <- paste(prefix, 1:ncol(W), sep = "_")
-  colnames(D) <- paste("dist", 1:ncol(D), sep = "_")
+  colnames(D) <- paste(prefix_dist, 1:ncol(D), sep = "_")
 
   W <- as_tibble(W)
   D <- as_tibble(D)
@@ -38,7 +41,7 @@ return_neighbours <- function(formula, x, y, k) {
 
 #' Spatial si step
 #'
-#' `step_spatial_si` creates a *specification* of a recipe step that will add a new
+#' `step_neighbors` creates a *specification* of a recipe step that will add a new
 #' 'si' features to a dataset based on the inverse distance-weighted mean of
 #' surrounding observations.
 #'
@@ -49,13 +52,21 @@ return_neighbours <- function(formula, x, y, k) {
 #' @param outcome Selector function to choose which variable will be used to
 #'   create a new feature based on the inverse distance-weighted mean of
 #'   surrounding observations.
+#' @param neighbors The number of closest neighbors to use in the distance
+#'   weighting. The default is 3.
+#' @param scale A boolean to indicate whether the selected columns should be standardized
+#'   before transformation. Default is `TRUE`.
 #' @param role role or model term created by this step, what analysis
 #'  role should be assigned?. By default, the function assumes
 #'  that resulting distance will be used as a predictor in a model.
 #' @param trained A logical that will be updated once the step has been trained.
-#' @param neighbors The number of closest neighbors to use in the distance
-#'   weighting.
 #' @param data Used internally to store the training data.
+#' @param columns A character string that contains the names of columns used in the
+#' transformation. This is `NULL` until computed by `prep.recipe()`.
+#' @param means A named numeric vector of means. This is `NULL` until computed by
+#' `prep.recipe()`.
+#' @param sds A named numeric vector of standard deviations. This is `NULL` until
+#'   computed by `prep.recipe()`.
 #' @param skip A logical to skip training.
 #' @param id An identifier for the step. If omitted then this is generated
 #' automatically.
@@ -63,19 +74,22 @@ return_neighbours <- function(formula, x, y, k) {
 #' @return An updated version of `recipe` with the new step added to the
 #'   sequence of existing steps (if any).
 #' @export
-step_spatial_si <- function(
+step_neighbors <- function(
   recipe, ...,
   outcome = NULL,
   role = "predictor",
   trained = FALSE,
-  neighbors = NA,
+  neighbors = 3,
+  scale = TRUE,
   data = NULL,
   columns = NULL,
+  means = NULL,
+  sds = NULL,
   skip = FALSE,
-  id = recipes::rand_id("spatial_si")) {
+  id = recipes::rand_id("neighbors")) {
 
   if (!"nabor" %in% installed.packages()[, 1])
-    stop("step_spatial_si requires the package `nabor` to be installed")
+    stop("step_neighbors requires the package `nabor` to be installed")
 
   recipes::recipes_pkg_check("nabor")
   terms <- recipes::ellipse_check(...)
@@ -85,14 +99,17 @@ step_spatial_si <- function(
 
   recipes::add_step(
     recipe,
-    step_spatial_si_new(
+    step_neighbors_new(
       terms = terms,
       outcome = rlang::enquos(outcome),
+      neighbors = neighbors,
+      scale = scale,
       trained = trained,
       role = role,
-      neighbors = neighbors,
       data = data,
       columns = columns,
+      means = means,
+      sds = sds,
       skip = skip,
       id = id
     )
@@ -101,79 +118,106 @@ step_spatial_si <- function(
 
 
 # wrapper around 'step' function that sets the class of new step objects
-step_spatial_si_new <- function(terms, role, trained, outcome, neighbors,
-                                 data, columns, skip, id) {
+step_neighbors_new <- function(terms, role, trained, outcome, neighbors,
+                               scale, data, columns, means, sds, skip, id) {
   recipes::step(
-    subclass = "spatial_si",
+    subclass = "neighbors",
     terms = terms,
     role = role,
     trained = trained,
     outcome = outcome,
     neighbors = neighbors,
+    scale = scale,
     data = data,
     columns = columns,
+    means = means,
+    sds = sds,
     skip = skip,
     id = id
   )
 }
 
 #' @export
-prep.step_spatial_si <- function(x, training, info = NULL, ...) {
+prep.step_neighbors <- function(x, training, info = NULL, ...) {
 
   # First translate the terms argument into column name
   col_names <- terms_select(terms = x$terms, info = info)
   outcome_name <- terms_select(x$outcome, info = info)
 
+  # Standardize the data
+  if (x$scale) {
+    trans <- scale(training[col_names])
+    x$means <- attr(trans, "scaled:center")
+    x$sds <- attr(trans, "scaled:scale")
+  }
+
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE
-  step_spatial_si_new(
+  step_neighbors_new(
     terms = x$terms,
     role = x$role,
     trained = TRUE,
     outcome = outcome_name,
     neighbors = x$neighbors,
+    scale = x$scale,
     data = training,
     columns = col_names,
+    means = x$means,
+    sds = x$sds,
     skip = x$skip,
     id = x$id
   )
 }
 
 #' @export
-bake.step_spatial_si <- function(object, new_data, ...) {
+bake.step_neighbors <- function(object, new_data, ...) {
 
-  f <- as.formula(
-    paste(object$outcome, paste(object$columns, collapse = " + "), sep = " ~ ")
-  )
+  f <- as.formula(paste(object$outcome, paste(object$columns, collapse = " + "), sep = " ~ "))
 
-  lags <- return_neighbours(
+  if (object$scale) {
+    columns <- object$columns
+    new_data[columns] <-
+      scale(new_data[columns], object$means, object$sds)
+    object$data[columns] <- scale(object$data[columns], object$means, object$sds)
+  }
+
+  new_X <- return_neighbours(
       formula = f,
       x = object$data,
       y = new_data,
       k = object$neighbors
     )
 
-  new_data <- dplyr::bind_cols(new_data, lags)
+  new_data <- dplyr::bind_cols(new_data, new_X)
   new_data
 }
 
 #' @export
-tidy.step_spatial_si <- function(x, ...) {
+tidy.step_neighbors <- function(x, ...) {
   res <- tibble::tibble(
-    neighbors = x$neighbors
+    terms = recipes::sel2char(x$terms),
+    outcome = x$outcome,
+    neighbors = x$neighbors,
+    scale = x$scale
   )
+
+  if (recipes::is_trained(x)) {
+    res$means = x$means
+    res$sds = x$sds
+  }
+
   res
 }
 
 #' @export
-tunable.step_spatial_si <- function(x, ...) {
+tunable.step_neighbors <- function(x, ...) {
   tibble::tibble(
     name = c("neighbors"),
     call_info = list(
       list(pkg = "dials", fun = "neighbors", range = c(1, 10))
     ),
     source = "recipe",
-    component = "step_spatial_si",
+    component = "step_neighbors",
     component_id = x$id
   )
 }

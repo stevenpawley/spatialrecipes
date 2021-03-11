@@ -2,7 +2,7 @@ gaussian_kernel <- function(X, std = 2) {
   exp(-X^2 / std^2)
 }
 
-lag_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
+knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
   target_variable <-
     rlang::f_lhs(formula) %>%
     as.character()
@@ -44,9 +44,6 @@ lag_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 
   # calculate weighted mean/mode of neighbors
   if (inherits(x[[target_variable]], "numeric")) {
-    # W <- W / rowSums(W)
-    # fitted <- rowSums(neighbor_vals * W)
-
     fitted <- sapply(seq_len(nrow(W)), function(i)
       weighted.mean(x = neighbor_vals[i,], w = W[i,]))
 
@@ -54,6 +51,10 @@ lag_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
     fitted <- sapply(seq_len(nrow(W)), function(i) {
       collapse::fmode(x = neighbor_vals[i,], w = W[i,])
     })
+
+    target_type <- typeof(x[[target_variable]])
+    fitted <- as(fitted, target_type)
+    fitted <- factor(fitted, levels = levels(x[[target_variable]]))
   }
 
   new_feature_name <- paste(target_variable, "lag", k, weight_func, sep = "_")
@@ -67,9 +68,9 @@ lag_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 
 #' Spatial lag step
 #'
-#' `step_spatial_lag` creates a *specification* of a recipe step that will add a
-#' new 'lag' feature to a dataset based on the inverse distance-weighted mean of
-#' surrounding observations.
+#' `step_knn` creates a *specification* of a recipe step that will add a
+#' new 'lag' feature to a dataset based on the weighted or unweighted mean or mode of
+#' neighbouring observations.
 #'
 #' @param recipe A recipe.
 #' @param ... One or more selector functions to choose which variables are
@@ -85,9 +86,18 @@ lag_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 #' @param neighbors The number of closest neighbours to use in the distance
 #'   weighting.
 #' @param weight_func A single character for the kernel function used to weight
-#'   the distances between samples.
-#' @param dist_power Power function for "inv".
+#'   the distances between samples. The default is 'rectangular' and the available
+#'   choices are 'rectangular', 'inv', 'gaussian'.
+#' @param dist_power Power function for "inv". The default is 2.
+#' @param scale A boolean to indicate whether the selected columns should be standardized
+#'   before transformation. Default is `TRUE`.
 #' @param data Used internally to store the training data.
+#' @param columns A character string that contains the names of columns used in the
+#' transformation. This is `NULL` until computed by `prep.recipe()`.
+#' @param means A named numeric vector of means. This is `NULL` until computed by
+#' `prep.recipe()`.
+#' @param sds A named numeric vector of standard deviations. This is `NULL` until
+#'   computed by `prep.recipe()`.
 #' @param skip A logical to skip training.
 #' @param id An identifier for the step. If omitted then this is generated
 #'   automatically.
@@ -108,23 +118,26 @@ lag_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 #'
 #' rec_obj <- ames %>%
 #' recipe(Sale_Price ~ Latitude + Longitude) %>%
-#' step_spatial_lag(Latitude, Longitude, outcome = "Sale_Price", neighbors = 3,
+#' step_knn(Latitude, Longitude, outcome = "Sale_Price", neighbors = 3,
 #'                  weight_func = "inv", dist_power = 2)
 #'
 #' prepped <- prep(rec_obj)
 #' juice(prepped)
-step_spatial_lag <- function(
+step_knn <- function(
   recipe, ...,
   outcome = NULL,
   role = "predictor",
   trained = FALSE,
-  neighbors = NA,
-  weight_func = NULL,
-  dist_power = NA,
+  neighbors = 3,
+  weight_func = "rectangular",
+  dist_power = 2,
+  scale = TRUE,
   data = NULL,
   columns = NULL,
+  means = NULL,
+  sds = NULL,
   skip = FALSE,
-  id = recipes::rand_id("spatial_lag")) {
+  id = recipes::rand_id("knn")) {
 
   recipes::recipes_pkg_check("nabor")
 
@@ -138,7 +151,7 @@ step_spatial_lag <- function(
 
   recipes::add_step(
     recipe,
-    step_spatial_lag_new(
+    step_knn_new(
       terms = terms,
       outcome = rlang::enquos(outcome),
       trained = trained,
@@ -146,8 +159,11 @@ step_spatial_lag <- function(
       neighbors = neighbors,
       weight_func = weight_func,
       dist_power = dist_power,
+      scale = scale,
       data = data,
       columns = columns,
+      means = means,
+      sds = sds,
       skip = skip,
       id = id
     )
@@ -155,11 +171,11 @@ step_spatial_lag <- function(
 }
 
 # wrapper around 'step' function that sets the class of new step objects
-step_spatial_lag_new <- function(terms, role, trained, outcome, neighbors,
-                                 weight_func, dist_power, data, columns, skip,
-                                 id) {
+step_knn_new <- function(terms, role, trained, outcome, neighbors,
+                         weight_func, dist_power, scale, data, columns, means, sds,
+                         skip, id) {
   recipes::step(
-    subclass = "spatial_lag",
+    subclass = "knn",
     terms = terms,
     role = role,
     trained = trained,
@@ -167,22 +183,32 @@ step_spatial_lag_new <- function(terms, role, trained, outcome, neighbors,
     neighbors = neighbors,
     weight_func = weight_func,
     dist_power = dist_power,
+    scale = scale,
     data = data,
     columns = columns,
+    means = means,
+    sds = sds,
     skip = skip,
     id = id
   )
 }
 
 #' @export
-prep.step_spatial_lag <- function(x, training, info = NULL, ...) {
+prep.step_knn <- function(x, training, info = NULL, ...) {
   # First translate the terms argument into column name
   col_names <- recipes::terms_select(terms = x$terms, info = info)
   outcome_name <- recipes::terms_select(x$outcome, info = info)
 
+  # Standardize the data
+  if (x$scale) {
+    trans <- scale(training[col_names])
+    x$means <- attr(trans, "scaled:center")
+    x$sds <- attr(trans, "scaled:scale")
+  }
+
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE
-  step_spatial_lag_new(
+  step_knn_new(
     terms = x$terms,
     role = x$role,
     trained = TRUE,
@@ -190,35 +216,44 @@ prep.step_spatial_lag <- function(x, training, info = NULL, ...) {
     neighbors = x$neighbors,
     weight_func = x$weight_func,
     dist_power = x$dist_power,
+    scale = x$scale,
     data = training,
     columns = col_names,
+    means = x$means,
+    sds = x$sds,
     skip = x$skip,
     id = x$id
   )
 }
 
 #' @export
-bake.step_spatial_lag <- function(object, new_data, ...) {
+bake.step_knn <- function(object, new_data, ...) {
   f <- as.formula(
     paste(object$outcome, paste(object$columns, collapse = " + "), sep = " ~ ")
   )
 
-  lags <-
-    lag_train(
-      formula = f,
-      x = object$data,
-      y = new_data,
-      k = object$neighbors,
-      weight_func = object$weight_func,
-      dist_power = object$dist_power
-    )
+  if (object$scale) {
+    columns <- object$columns
+    new_data[columns] <-
+      scale(new_data[columns], object$means, object$sds)
+    object$data[columns] <- scale(object$data[columns], object$means, object$sds)
+  }
+
+  lags <- knn_train(
+    formula = f,
+    x = object$data,
+    y = new_data,
+    k = object$neighbors,
+    weight_func = object$weight_func,
+    dist_power = object$dist_power
+  )
 
   new_data <- dplyr::bind_cols(new_data, lags)
   new_data
 }
 
 #' @export
-print.step_spatial_lag <-
+print.step_knn <-
   function(x, width = max(20, options()$width - 30), ...) {
     cat("Spatial lags")
 
@@ -230,10 +265,10 @@ print.step_spatial_lag <-
     invisible(x)
   }
 
-#' @rdname step_spatial_lag
-#' @param x A `step_spatial_lag` object.
+#' @rdname step_knn
+#' @param x A `step_knn` object.
 #' @export
-tidy.step_spatial_lag <- function(x, ...) {
+tidy.step_knn <- function(x, ...) {
   term_names <- sel2char(x$terms)
 
   res <- tibble(
@@ -244,12 +279,16 @@ tidy.step_spatial_lag <- function(x, ...) {
     dist_power = rep(x$dist_power, times = length(term_names))
   )
 
+  if (recipes::is_trained(x)) {
+    res$means = x$means
+    res$sds = x$sds
+  }
+
   res
 }
 
-#' @rdname tunable.step
 #' @export
-tunable.step_spatial_lag <- function(x, ...) {
+tunable.step_knn <- function(x, ...) {
   tibble::tibble(
     name = c("neighbors", "weight_func", "dist_power"),
     call_info = list(
@@ -258,13 +297,7 @@ tunable.step_spatial_lag <- function(x, ...) {
       list(pkg = "dials", fun = "dist_power", range = c(1, 2))
     ),
     source = "recipe",
-    component = "step_spatial_lag",
+    component = "step_knn",
     component_id = x$id
   )
-}
-
-#' @rdname required_pkgs.step
-#' @export
-required_pkgs.step_spatial_lag <- function(x, ...) {
-  c("nabor")
 }
