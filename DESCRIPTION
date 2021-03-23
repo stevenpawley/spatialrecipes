@@ -31,6 +31,7 @@ Imports:
     collapse
 RoxygenNote: 7.1.1
 Suggests:
-    testthat,
+    testthat (>= 3.0.0),
     roxygen2,
     covr
+Config/testthat/edition: 3
