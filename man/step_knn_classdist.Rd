@@ -31,28 +31,28 @@ method, these are not currently used.}
 create a new feature based on the inverse distance-weighted mean of
 surrounding observations.}
 
-\item{role}{role or model term created by this step, what analysis
-role should be assigned?. By default, the function assumes
-that resulting distance will be used as a predictor in a model.}
+\item{role}{role or model term created by this step, what analysis role
+should be assigned?. By default, the function assumes that resulting
+distance will be used as a predictor in a model.}
 
 \item{neighbors}{The number of closest neighbors to use in the distance
 weighting. Default is 3.}
 
-\item{scale}{A boolean to indicate whether the selected columns should be standardized
-before transformation. Default is `TRUE`.}
+\item{scale}{A boolean to indicate whether the selected columns should be
+standardized before transformation. Default is `TRUE`.}
 
 \item{trained}{A logical that will be updated once the step has been trained.}
 
 \item{data}{Used internally to store the training data.}
 
-\item{columns}{A character string that contains the names of columns used in the
-transformation. This is `NULL` until computed by `prep.recipe()`.}
+\item{columns}{A character string that contains the names of columns used in
+the transformation. This is `NULL` until computed by `prep.recipe()`.}
 
-\item{means}{A named numeric vector of means. This is `NULL` until computed by
-`prep.recipe()`.}
+\item{means}{A named numeric vector of means. This is `NULL` until computed
+by `prep.recipe()`.}
 
-\item{sds}{A named numeric vector of standard deviations. This is `NULL` until
-computed by `prep.recipe()`.}
+\item{sds}{A named numeric vector of standard deviations. This is `NULL`
+until computed by `prep.recipe()`.}
 
 \item{skip}{A logical to skip training.}
 
@@ -64,16 +64,17 @@ An updated version of `recipe` with the new step added to the
   sequence of existing steps (if any).
 }
 \description{
-`step_knn_classdist` creates a *specification* of a recipe step that will add new
-features to a dataset based on the distances to each neighbor, per class.
+`step_knn_classdist` creates a *specification* of a recipe step that will add
+new features to a dataset based on the distances to each neighbor, per class.
 }
 \details{
-For example, if a dataset's outcome variable contains two classes, c("sand", "clay"),
-this step will append a new feature matrix with (n_samples, n_classes * neighbors) to
-the dataset. For the previous example with neighbors = 3, the step would create new
-features called "sand_neighbor1, "sand_neighbor2, "sand_neighbor3", "clay_neighbor1",
-"clay_neighbor2", "clay_neighbor3" with each feature representing the distance
-(in the feature space) to the closest k points of each class.
+For example, if a dataset's outcome variable contains two classes, c("sand",
+"clay"), this step will append a new feature matrix with (n_samples,
+n_classes * neighbors) to the dataset. For the previous example with
+neighbors = 3, the step would create new features called "sand_neighbor1,
+"sand_neighbor2, "sand_neighbor3", "clay_neighbor1", "clay_neighbor2",
+"clay_neighbor3" with each feature representing the distance (in the feature
+space) to the closest k points of each class.
 
 This step is based on the concept described in the 'fastknn' package
 (https://github.com/davpinto/fastknn) to perform a non-linear mapping of the
