@@ -29,10 +29,11 @@ knn_class_proportions <- function(formula, x, y, k) {
   # calculate proportions of each class
   class_variables <- levels(x[[target_variable]])
 
+  df <- as.data.frame(matrix(nrow = 1, ncol = length(class_variables)))
+  names(df) <- class_variables
+
   props <- apply(neighbor_vals, 1, function(x) {
     row_prop <- prop.table(table(x))
-    df <- as.data.frame(matrix(nrow = 1, ncol = length(class_variables)))
-    names(df) <- class_variables
     df[1, names(row_prop)] <- row_prop
     df
   })
