@@ -6,7 +6,7 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
   target_variable <-
     rlang::f_lhs(formula) %>%
     as.character()
-  term_variables <- attr(terms(formula), "term.labels")
+  term_variables <- attr(terms(formula, data = x), "term.labels")
 
   # split data
   train_data <- x[term_variables]
