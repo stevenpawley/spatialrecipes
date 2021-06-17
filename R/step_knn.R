@@ -27,7 +27,7 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
   neighbor_ids <- neighbors$nn.idx
   D <- neighbors$nn.dists
 
-  # create initial row-normalized weights from distances
+  # create initial row-standardized weights
   W <- D / rowSums(D)
 
   # get values of neighbors
@@ -49,7 +49,7 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 
   } else {
     fitted <- sapply(seq_len(nrow(W)), function(i) {
-      collapse::fmode(x = neighbor_vals[i,], w = W[i,])
+      collapse::fmode(x = neighbor_vals[i,], w = W[i, ])
     })
 
     target_type <- typeof(x[[target_variable]])
@@ -77,7 +77,7 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 #'   affected by the step. See selections() for more details. For the tidy
 #'   method, these are not currently used.
 #' @param outcome Selector function to choose which variable will be used to
-#'   create a new feature based on the inverse distance-weighted mean of
+#'   create a new feature based on the unweighted or distance-weighted mean of
 #'   surrounding observations.
 #' @param role role or model term created by this step, what analysis role
 #'   should be assigned?. By default, the function assumes that resulting
@@ -89,8 +89,6 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 #'   the distances between samples. The default is 'rectangular' and the available
 #'   choices are 'rectangular', 'inv', 'gaussian'.
 #' @param dist_power Power function for "inv". The default is 2.
-#' @param scale A boolean to indicate whether the selected columns should be standardized
-#'   before transformation. Default is `TRUE`.
 #' @param data Used internally to store the training data.
 #' @param columns A character string that contains the names of columns used in the
 #' transformation. This is `NULL` until computed by `prep.recipe()`.
@@ -131,11 +129,8 @@ step_knn <- function(
   neighbors = 3,
   weight_func = "rectangular",
   dist_power = 2,
-  scale = TRUE,
   data = NULL,
   columns = NULL,
-  means = NULL,
-  sds = NULL,
   skip = FALSE,
   id = recipes::rand_id("knn")) {
 
@@ -159,11 +154,8 @@ step_knn <- function(
       neighbors = neighbors,
       weight_func = weight_func,
       dist_power = dist_power,
-      scale = scale,
       data = data,
       columns = columns,
-      means = means,
-      sds = sds,
       skip = skip,
       id = id
     )
@@ -172,8 +164,7 @@ step_knn <- function(
 
 # wrapper around 'step' function that sets the class of new step objects
 step_knn_new <- function(terms, role, trained, outcome, neighbors,
-                         weight_func, dist_power, scale, data, columns, means, sds,
-                         skip, id) {
+                         weight_func, dist_power, data, columns, skip, id) {
   recipes::step(
     subclass = "knn",
     terms = terms,
@@ -183,11 +174,8 @@ step_knn_new <- function(terms, role, trained, outcome, neighbors,
     neighbors = neighbors,
     weight_func = weight_func,
     dist_power = dist_power,
-    scale = scale,
     data = data,
     columns = columns,
-    means = means,
-    sds = sds,
     skip = skip,
     id = id
   )
@@ -199,13 +187,6 @@ prep.step_knn <- function(x, training, info = NULL, ...) {
   col_names <- recipes::terms_select(terms = x$terms, info = info)
   outcome_name <- recipes::terms_select(x$outcome, info = info)
 
-  # Standardize the data
-  if (x$scale) {
-    trans <- scale(training[col_names])
-    x$means <- attr(trans, "scaled:center")
-    x$sds <- attr(trans, "scaled:scale")
-  }
-
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE
   step_knn_new(
@@ -216,11 +197,8 @@ prep.step_knn <- function(x, training, info = NULL, ...) {
     neighbors = x$neighbors,
     weight_func = x$weight_func,
     dist_power = x$dist_power,
-    scale = x$scale,
     data = training,
     columns = col_names,
-    means = x$means,
-    sds = x$sds,
     skip = x$skip,
     id = x$id
   )
@@ -231,13 +209,6 @@ bake.step_knn <- function(object, new_data, ...) {
   f <- as.formula(
     paste(object$outcome, paste(object$columns, collapse = " + "), sep = " ~ ")
   )
-
-  if (object$scale) {
-    columns <- object$columns
-    new_data[columns] <-
-      scale(new_data[columns], object$means, object$sds)
-    object$data[columns] <- scale(object$data[columns], object$means, object$sds)
-  }
 
   lags <- knn_train(
     formula = f,

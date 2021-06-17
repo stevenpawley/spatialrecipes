@@ -14,11 +14,8 @@ step_knn(
   neighbors = 3,
   weight_func = "rectangular",
   dist_power = 2,
-  scale = TRUE,
   data = NULL,
   columns = NULL,
-  means = NULL,
-  sds = NULL,
   skip = FALSE,
   id = recipes::rand_id("knn")
 )
@@ -33,7 +30,7 @@ affected by the step. See selections() for more details. For the tidy
 method, these are not currently used.}
 
 \item{outcome}{Selector function to choose which variable will be used to
-create a new feature based on the inverse distance-weighted mean of
+create a new feature based on the unweighted or distance-weighted mean of
 surrounding observations.}
 
 \item{role}{role or model term created by this step, what analysis role
@@ -51,19 +48,10 @@ choices are 'rectangular', 'inv', 'gaussian'.}
 
 \item{dist_power}{Power function for "inv". The default is 2.}
 
-\item{scale}{A boolean to indicate whether the selected columns should be standardized
-before transformation. Default is `TRUE`.}
-
 \item{data}{Used internally to store the training data.}
 
 \item{columns}{A character string that contains the names of columns used in the
 transformation. This is `NULL` until computed by `prep.recipe()`.}
-
-\item{means}{A named numeric vector of means. This is `NULL` until computed by
-`prep.recipe()`.}
-
-\item{sds}{A named numeric vector of standard deviations. This is `NULL` until
-computed by `prep.recipe()`.}
 
 \item{skip}{A logical to skip training.}
 
@@ -71,6 +59,12 @@ computed by `prep.recipe()`.}
 automatically.}
 
 \item{x}{A `step_knn` object.}
+
+\item{means}{A named numeric vector of means. This is `NULL` until computed by
+`prep.recipe()`.}
+
+\item{sds}{A named numeric vector of standard deviations. This is `NULL` until
+computed by `prep.recipe()`.}
 }
 \value{
 An updated version of `recipe` with the new step added to the

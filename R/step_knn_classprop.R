@@ -57,8 +57,8 @@ knn_class_proportions <- function(formula, x, y, k) {
 #'   affected by the step. See selections() for more details. For the tidy
 #'   method, these are not currently used.
 #' @param class Selector function to choose which variable will be used to
-#'   create a new feature based on the inverse distance-weighted mean of
-#'   surrounding observations.
+#'   create a new feature based proportion of occurrencs of each class within
+#'   the spatial neighborhood.
 #' @param role role or model term created by this step, what analysis role
 #'   should be assigned?. By default, the function assumes that resulting
 #'   distance will be used as a predictor in a model.

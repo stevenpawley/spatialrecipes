@@ -10,12 +10,9 @@ step_knn_classdist(
   class = NULL,
   role = "predictor",
   neighbors = 3,
-  scale = TRUE,
   trained = FALSE,
   data = NULL,
   columns = NULL,
-  means = NULL,
-  sds = NULL,
   skip = FALSE,
   id = recipes::rand_id("knn_classdist")
 )
@@ -28,8 +25,7 @@ affected by the step. See selections() for more details. For the tidy
 method, these are not currently used.}
 
 \item{class}{Selector function to choose which variable will be used to
-create a new feature based on the inverse distance-weighted mean of
-surrounding observations.}
+create features based on the distances to each neighbor per class.}
 
 \item{role}{role or model term created by this step, what analysis role
 should be assigned?. By default, the function assumes that resulting
@@ -38,21 +34,12 @@ distance will be used as a predictor in a model.}
 \item{neighbors}{The number of closest neighbors to use in the distance
 weighting. Default is 3.}
 
-\item{scale}{A boolean to indicate whether the selected columns should be
-standardized before transformation. Default is `TRUE`.}
-
 \item{trained}{A logical that will be updated once the step has been trained.}
 
 \item{data}{Used internally to store the training data.}
 
 \item{columns}{A character string that contains the names of columns used in
 the transformation. This is `NULL` until computed by `prep.recipe()`.}
-
-\item{means}{A named numeric vector of means. This is `NULL` until computed
-by `prep.recipe()`.}
-
-\item{sds}{A named numeric vector of standard deviations. This is `NULL`
-until computed by `prep.recipe()`.}
 
 \item{skip}{A logical to skip training.}
 

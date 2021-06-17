@@ -11,11 +11,8 @@ step_neighbors(
   role = "predictor",
   trained = FALSE,
   neighbors = 3,
-  scale = TRUE,
   data = NULL,
   columns = NULL,
-  means = NULL,
-  sds = NULL,
   skip = FALSE,
   id = recipes::rand_id("neighbors")
 )
@@ -40,19 +37,10 @@ that resulting distance will be used as a predictor in a model.}
 \item{neighbors}{The number of closest neighbors to use in the distance
 weighting. The default is 3.}
 
-\item{scale}{A boolean to indicate whether the selected columns should be standardized
-before transformation. Default is `TRUE`.}
-
 \item{data}{Used internally to store the training data.}
 
 \item{columns}{A character string that contains the names of columns used in the
 transformation. This is `NULL` until computed by `prep.recipe()`.}
-
-\item{means}{A named numeric vector of means. This is `NULL` until computed by
-`prep.recipe()`.}
-
-\item{sds}{A named numeric vector of standard deviations. This is `NULL` until
-computed by `prep.recipe()`.}
 
 \item{skip}{A logical to skip training.}
 

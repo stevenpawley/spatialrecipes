@@ -24,14 +24,14 @@ step_geodist2d(
 \method{tidy}{step_geodist2d}(x, ...)
 }
 \arguments{
-\item{lon, lat}{Selector functions to choose which variables are
-affected by the step. See selections() for more details.}
+\item{lon, lat}{Selector functions to choose which variables are affected by
+the step. See selections() for more details.}
 
-\item{ref_lon, }{ref_lat Numeric values for the location of the
-reference points. New features representing the euclidean distance to each
-`ref_lon`, and `ref_lat` location will be created, unless
-`minimum = TRUE` when the minimum distance to the combined features will be
-created as a single new feature.}
+\item{ref_lon, }{ref_lat Numeric values for the location of the reference
+points. New features representing the euclidean distance to each `ref_lon`,
+and `ref_lat` location will be created, unless `minimum = TRUE` when the
+minimum distance to the combined features will be created as a single new
+feature.}
 
 \item{minimum}{A logical for whether only the minimum distance to the
 reference locations should be calculated.}
@@ -56,8 +56,8 @@ representing the index of each reference location.}
 \value{
 An updated version of `recipe` with the new step added to the
   sequence of existing steps (if any). For the `tidy` method, a tibble with
-  columns echoing the values of `lat`, `lon`, `ref_lat`, `ref_lon`,
-  `name`, and `id`.
+  columns echoing the values of `lat`, `lon`, `ref_lat`, `ref_lon`, `name`,
+  and `id`.
 }
 \description{
 `step_geodist2d` creates a *specification* of a recipe step that will

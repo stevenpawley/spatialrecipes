@@ -3,13 +3,13 @@
 #' `step_geodist2d` creates a *specification* of a recipe step that will
 #' calculate the distance between points on a map to a reference location.
 #'
-#' @param lon,lat Selector functions to choose which variables are
-#'   affected by the step. See selections() for more details.
-#' @param ref_lon, ref_lat Numeric values for the location of the
-#'   reference points. New features representing the euclidean distance to each
-#'   `ref_lon`, and `ref_lat` location will be created, unless
-#'   `minimum = TRUE` when the minimum distance to the combined features will be
-#'   created as a single new feature.
+#' @param lon,lat Selector functions to choose which variables are affected by
+#'   the step. See selections() for more details.
+#' @param ref_lon, ref_lat Numeric values for the location of the reference
+#'   points. New features representing the euclidean distance to each `ref_lon`,
+#'   and `ref_lat` location will be created, unless `minimum = TRUE` when the
+#'   minimum distance to the combined features will be created as a single new
+#'   feature.
 #' @param role or model term created by this step, what analysis role should be
 #'   assigned?. By default, the function assumes that resulting distance will be
 #'   used as a predictor in a model.
@@ -25,60 +25,73 @@
 #'   representing the index of each reference location.
 #' @return An updated version of `recipe` with the new step added to the
 #'   sequence of existing steps (if any). For the `tidy` method, a tibble with
-#'   columns echoing the values of `lat`, `lon`, `ref_lat`, `ref_lon`,
-#'   `name`, and `id`.
+#'   columns echoing the values of `lat`, `lon`, `ref_lat`, `ref_lon`, `name`,
+#'   and `id`.
 #' @keywords datagen
 #' @concept preprocessing
 #' @export
-step_geodist2d <- function(recipe,
-                           lat = NULL,
-                           lon = NULL,
-                           ref_lat = NULL,
-                           ref_lon = NULL,
-                           minimum = FALSE,
-                           log = FALSE,
-                           role = "predictor",
-                           trained = FALSE,
-                           name = "geo_dist2d",
-                           columns = NULL,
-                           skip = FALSE,
-                           id = recipes::rand_id("geodist2d")) {
-  vect_lengths <- c(length(ref_lon), length(ref_lat))
+step_geodist2d <-
+  function(recipe,
+           lat = NULL,
+           lon = NULL,
+           ref_lat = NULL,
+           ref_lon = NULL,
+           minimum = FALSE,
+           log = FALSE,
+           role = "predictor",
+           trained = FALSE,
+           name = "geo_dist2d",
+           columns = NULL,
+           skip = FALSE,
+           id = recipes::rand_id("geodist2d")) {
 
-  if (!all(vect_lengths == vect_lengths[1]))
-    rlang::abort("`ref_lon`, and `ref_lat` should be the same length.")
+    vect_lengths <- c(length(ref_lon), length(ref_lat))
 
-  if (length(log) != 1 || !is.logical(log))
-    rlang::abort("`log` should be a single logical value.")
+    if (!all(vect_lengths == vect_lengths[1]))
+      rlang::abort("`ref_lon`, and `ref_lat` should be the same length.")
 
-  if (length(name) != 1 || !is.character(name))
-    rlang::abort("`name` should be a single character value.")
+    if (length(log) != 1 || !is.logical(log))
+      rlang::abort("`log` should be a single logical value.")
 
-  recipes::recipes_pkg_check("nabor")
+    if (length(name) != 1 || !is.character(name))
+      rlang::abort("`name` should be a single character value.")
 
-  recipes::add_step(
-    recipe,
-    step_geodist2d_new(
-      lon = rlang::enquos(lon),
-      lat = rlang::enquos(lat),
-      role = role,
-      trained = trained,
-      ref_lon = ref_lon,
-      ref_lat = ref_lat,
-      minimum = minimum,
-      log = log,
-      name = name,
-      columns = columns,
-      skip = skip,
-      id = id
+    recipes::recipes_pkg_check("nabor")
+
+    recipes::add_step(
+      recipe,
+      step_geodist2d_new(
+        lon = rlang::enquos(lon),
+        lat = rlang::enquos(lat),
+        role = role,
+        trained = trained,
+        ref_lon = ref_lon,
+        ref_lat = ref_lat,
+        minimum = minimum,
+        log = log,
+        name = name,
+        columns = columns,
+        skip = skip,
+        id = id
+      )
     )
-  )
-}
+  }
 
 
 step_geodist2d_new <-
-  function(lon, lat, role, trained, ref_lon, ref_lat, minimum, log, name,
-           columns, skip, id) {
+  function(lon,
+           lat,
+           role,
+           trained,
+           ref_lon,
+           ref_lat,
+           minimum,
+           log,
+           name,
+           columns,
+           skip,
+           id) {
+
     recipes::step(
       subclass = "geodist2d",
       lon = lon,
@@ -139,21 +152,15 @@ geo_dist_2d_calc <- function(x, a, b) {
 #' @export
 bake.step_geodist2d <- function(object, new_data, ...) {
   if (isFALSE(object$minimum)) {
-    dist_vals <- geo_dist_2d_calc(
-      x = new_data[, object$columns],
-      a = object$ref_lat,
-      b = object$ref_lon
-    )
+    dist_vals <- geo_dist_2d_calc(x = new_data[, object$columns],
+                                  a = object$ref_lat,
+                                  b = object$ref_lon)
   } else {
-    refs <- tibble(
-      y = object$ref_lat,
-      x = object$ref_lon
-    )
-    nn <- nabor::knn(
-      data = as.matrix(refs),
-      query = as.matrix(new_data[, object$columns]),
-      k = 1
-    )
+    refs <- tibble(y = object$ref_lat,
+                   x = object$ref_lon)
+    nn <- nabor::knn(data = as.matrix(refs),
+                     query = as.matrix(new_data[, object$columns]),
+                     k = 1)
     dist_vals <- as.numeric(nn$nn.dists)
   }
 
@@ -165,7 +172,8 @@ bake.step_geodist2d <- function(object, new_data, ...) {
 
   if (inherits(dist_vals, "matrix")) {
     dist_vals <- as.data.frame(t(dist_vals))
-    feature_names <- paste(object$name, seq_len(ncol(dist_vals)), sep = "_")
+    feature_names <-
+      paste(object$name, seq_len(ncol(dist_vals)), sep = "_")
     names(dist_vals) <- feature_names
     new_data <- bind_cols(new_data, dist_vals)
   }
@@ -176,10 +184,12 @@ bake.step_geodist2d <- function(object, new_data, ...) {
 
 print.step_geodist2d <-
   function(x, width = max(20, options()$width - 30), ...) {
-    cat("Geographical distances from",
-        format(x$ref_lat, digits = 10),
-        format(x$ref_lon, digits = 10),
-        "\n")
+    cat(
+      "Geographical distances from",
+      format(x$ref_lat, digits = 10),
+      format(x$ref_lon, digits = 10),
+      "\n"
+    )
     invisible(x)
   }
 

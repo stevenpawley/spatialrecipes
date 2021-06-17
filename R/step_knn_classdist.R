@@ -65,12 +65,9 @@ return_knn_classdists <- function(formula, x, y, k) {
 #'   affected by the step. See selections() for more details. For the tidy
 #'   method, these are not currently used.
 #' @param class Selector function to choose which variable will be used to
-#'   create a new feature based on the inverse distance-weighted mean of
-#'   surrounding observations.
+#'   create features based on the distances to each neighbor per class.
 #' @param neighbors The number of closest neighbors to use in the distance
 #'   weighting. Default is 3.
-#' @param scale A boolean to indicate whether the selected columns should be
-#'   standardized before transformation. Default is `TRUE`.
 #' @param role role or model term created by this step, what analysis role
 #'   should be assigned?. By default, the function assumes that resulting
 #'   distance will be used as a predictor in a model.
@@ -78,10 +75,6 @@ return_knn_classdists <- function(formula, x, y, k) {
 #' @param data Used internally to store the training data.
 #' @param columns A character string that contains the names of columns used in
 #'   the transformation. This is `NULL` until computed by `prep.recipe()`.
-#' @param means A named numeric vector of means. This is `NULL` until computed
-#'   by `prep.recipe()`.
-#' @param sds A named numeric vector of standard deviations. This is `NULL`
-#'   until computed by `prep.recipe()`.
 #' @param skip A logical to skip training.
 #' @param id An identifier for the step. If omitted then this is generated
 #'   automatically.
@@ -94,12 +87,9 @@ step_knn_classdist <- function(
   class = NULL,
   role = "predictor",
   neighbors = 3,
-  scale = TRUE,
   trained = FALSE,
   data = NULL,
   columns = NULL,
-  means = NULL,
-  sds = NULL,
   skip = FALSE,
   id = recipes::rand_id("knn_classdist")) {
 
@@ -117,11 +107,8 @@ step_knn_classdist <- function(
       trained = trained,
       role = role,
       neighbors = neighbors,
-      scale = scale,
       data = data,
       columns = columns,
-      means = means,
-      sds = sds,
       skip = skip,
       id = id
     )
@@ -131,7 +118,7 @@ step_knn_classdist <- function(
 
 # wrapper around 'step' function that sets the class of new step objects
 step_knn_classdist_new <- function(terms, role, trained, class, neighbors,
-                                   scale, data, columns, means, sds, skip, id) {
+                                   data, columns, skip, id) {
   recipes::step(
     subclass = "knn_classdist",
     terms = terms,
@@ -139,11 +126,8 @@ step_knn_classdist_new <- function(terms, role, trained, class, neighbors,
     trained = trained,
     class = class,
     neighbors = neighbors,
-    scale = scale,
     data = data,
     columns = columns,
-    means = means,
-    sds = sds,
     skip = skip,
     id = id
   )
@@ -169,13 +153,6 @@ prep.step_knn_classdist <- function(x, training, info = NULL, ...) {
   if (!all(n_per_class >= x$neighbors + 1))
     rlang::abort("There needs to be >= neighbors+1 cases")
 
-  # Standardize the data
-  if (x$scale) {
-    trans <- scale(training[col_names])
-    x$means <- attr(trans, "scaled:center")
-    x$sds <- attr(trans, "scaled:scale")
-  }
-
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE
   step_knn_classdist_new(
@@ -184,11 +161,8 @@ prep.step_knn_classdist <- function(x, training, info = NULL, ...) {
     trained = TRUE,
     class = class_name,
     neighbors = x$neighbors,
-    scale = x$scale,
     data = training,
     columns = col_names,
-    means = x$means,
-    sds = x$sds,
     skip = x$skip,
     id = x$id
   )
@@ -196,14 +170,8 @@ prep.step_knn_classdist <- function(x, training, info = NULL, ...) {
 
 #' @export
 bake.step_knn_classdist <- function(object, new_data, ...) {
-  f <- as.formula(paste(object$class, paste(object$columns, collapse = " + "), sep = " ~ "))
-
-  if (object$scale) {
-    columns <- object$columns
-    new_data[columns] <-
-      scale(new_data[columns], object$means, object$sds)
-    object$data[columns] <- scale(object$data[columns], object$means, object$sds)
-  }
+  f <- as.formula(
+    paste(object$class, paste(object$columns, collapse = " + "), sep = " ~ "))
 
   new_X <- return_knn_classdists(
     formula = f,
@@ -221,15 +189,8 @@ tidy.step_knn_classdist <- function(x, ...) {
   res <- tibble::tibble(
     terms = recipes::sel2char(x$terms),
     class = x$class,
-    neighbors = x$neighbors,
-    scale = x$scale
+    neighbors = x$neighbors
   )
-
-  if (recipes::is_trained(x)) {
-    res$means = x$means
-    res$sds = x$sds
-  }
-
   res
 }
 
