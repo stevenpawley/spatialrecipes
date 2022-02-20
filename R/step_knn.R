@@ -2,6 +2,10 @@ gaussian_kernel <- function(X, std = 2) {
   exp(-X^2 / std^2)
 }
 
+optKernel <- function(k, d = 1){
+  1 / k * (1 + d / 2 - d / (2 * k^(2 / d)) * ((1:k)^(1 + 2 / d) - (0:(k - 1))^(1 + 2 / d)))
+}
+
 knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
   target_variable <-
     rlang::f_lhs(formula) %>%
@@ -34,10 +38,23 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
   neighbor_vals <- matrix(neighbor_vals, ncol = k)
 
   # calculate weights
-  W <- switch(weight_func,
+  mf <- model.frame(formula, data = train_data)
+  mt <- attr(mf, "terms")
+  d <- sum(attr(mt, "order"))
+
+  W <- switch(
+    weight_func,
+    rank = (k + 1) - t(apply(as.matrix(D), 1, rank)),
     inv = 1 / W^dist_power,
     rectangular = matrix(1, nrow = nrow(neighbor_vals), ncol = k),
-    gaussian = gaussian_kernel(W, dist_power)
+    triangular = 1-W,
+    epanechnikov = 0.75 * (1 - W^2),
+    biweight = dbeta((W + 1) / 2, 3, 3),
+    triweight = dbeta((W + 1) / 2, 4, 4),
+    cos = cos(W * pi / 2),
+    triweights = 1,
+    gaussian = gaussian_kernel(W, dist_power),
+    optimal = rep(optKernel(k, d = d), each = dim(query_data)[1])
   )
 
   # calculate weighted mean/mode of neighbors
@@ -74,9 +91,9 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 #' @param ... One or more selector functions to choose which variables are
 #'   affected by the step. See selections() for more details. For the tidy
 #'   method, these are not currently used.
-#' @param outcome Selector function to choose which variable will be used to
-#'   create a new feature based on the unweighted or distance-weighted mean of
-#'   surrounding observations.
+#' @param outcome Character, name of which variable will be used to create a new
+#'   feature based on the unweighted or distance-weighted mean of surrounding
+#'   observations.
 #' @param role role or model term created by this step, what analysis role
 #'   should be assigned?. By default, the function assumes that resulting
 #'   distance will be used as a predictor in a model.
@@ -139,16 +156,11 @@ step_knn <- function(recipe, ...,
   if (neighbors <= 0) {
     rlang::abort("`neighbors` should be greater than 0.")
   }
-
-  if (!weight_func %in% c("inv", "gaussian", "rectangular")) {
-    rlang::abort("`weight_func` should be either 'inv', 'gaussian', or 'rectangular'")
-  }
-
   recipes::add_step(
     recipe,
     step_knn_new(
       terms = terms,
-      outcome = rlang::enquos(outcome),
+      outcome = outcome,
       trained = trained,
       role = role,
       neighbors = neighbors,
@@ -185,7 +197,6 @@ step_knn_new <- function(terms, role, trained, outcome, neighbors,
 prep.step_knn <- function(x, training, info = NULL, ...) {
   # First translate the terms argument into column name
   col_names <- recipes::terms_select(terms = x$terms, info = info)
-  outcome_name <- recipes::terms_select(x$outcome, info = info)
 
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE
@@ -193,7 +204,7 @@ prep.step_knn <- function(x, training, info = NULL, ...) {
     terms = x$terms,
     role = x$role,
     trained = TRUE,
-    outcome = outcome_name,
+    outcome = outcome,
     neighbors = x$neighbors,
     weight_func = x$weight_func,
     dist_power = x$dist_power,
@@ -264,7 +275,7 @@ tunable.step_knn <- function(x, ...) {
     name = c("neighbors", "weight_func", "dist_power"),
     call_info = list(
       list(pkg = "dials", fun = "neighbors", range = c(1L, 10L)),
-      list(pkg = "dials", fun = "weight_func", values = c("rectangular", "inv", "gaussian")),
+      list(pkg = "dials", fun = "weight_func", values = dials::values_weight_func),
       list(pkg = "dials", fun = "dist_power", range = c(1, 2))
     ),
     source = "recipe",

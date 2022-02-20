@@ -13,6 +13,7 @@ return_neighbours <- function(formula, x, y, k) {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k + 1)
     neighbors$nn.idx <- neighbors$nn.idx[, 2:ncol(neighbors$nn.idx)]
     neighbors$nn.dists <- neighbors$nn.dists[, 2:ncol(neighbors$nn.dists)]
+
   } else {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k)
   }
@@ -67,25 +68,25 @@ return_neighbours <- function(formula, x, y, k) {
 #' @return An updated version of `recipe` with the new step added to the
 #'   sequence of existing steps (if any).
 #' @export
-step_neighbors <- function(recipe, ...,
-                           outcome = NULL,
-                           role = "predictor",
-                           trained = FALSE,
-                           neighbors = 3,
-                           data = NULL,
-                           columns = NULL,
-                           skip = FALSE,
-                           id = recipes::rand_id("neighbors")) {
-  if (!"nabor" %in% installed.packages()[, 1]) {
+step_neighbors <- function(
+  recipe, ...,
+  outcome = NULL,
+  role = "predictor",
+  trained = FALSE,
+  neighbors = 3,
+  data = NULL,
+  columns = NULL,
+  skip = FALSE,
+  id = recipes::rand_id("neighbors")) {
+
+  if (!"nabor" %in% installed.packages()[, 1])
     stop("step_neighbors requires the package `nabor` to be installed")
-  }
 
   recipes::recipes_pkg_check("nabor")
   terms <- recipes::ellipse_check(...)
 
-  if (neighbors <= 0) {
+  if (neighbors <= 0)
     rlang::abort("`neighbors` should be greater than 0.")
-  }
 
   recipes::add_step(
     recipe,
@@ -145,16 +146,16 @@ prep.step_neighbors <- function(x, training, info = NULL, ...) {
 
 #' @export
 bake.step_neighbors <- function(object, new_data, ...) {
+
   f <- as.formula(
-    paste(object$outcome, paste(object$columns, collapse = " + "), sep = " ~ ")
-  )
+    paste(object$outcome, paste(object$columns, collapse = " + "), sep = " ~ "))
 
   new_X <- return_neighbours(
-    formula = f,
-    x = object$data,
-    y = new_data,
-    k = object$neighbors
-  )
+      formula = f,
+      x = object$data,
+      y = new_data,
+      k = object$neighbors
+    )
 
   new_data <- dplyr::bind_cols(new_data, new_X)
   new_data
