@@ -47,17 +47,21 @@ step_geodist3d <- function(recipe,
                            id = recipes::rand_id("geodist3d")) {
   vect_lengths <- c(length(ref_lon), length(ref_lat), length(ref_height))
 
-  if (!all(vect_lengths == vect_lengths[1]))
+  if (!all(vect_lengths == vect_lengths[1])) {
     rlang::abort("`ref_lon`, `ref_lat` and `ref_height` should be the same length.")
+  }
 
-  if (all(vect_lengths == 0))
+  if (all(vect_lengths == 0)) {
     rlang::abort("at least a single reference location must be provided.")
+  }
 
-  if (length(log) != 1 || !is.logical(log))
+  if (length(log) != 1 || !is.logical(log)) {
     rlang::abort("`log` should be a single logical value.")
+  }
 
-  if (length(name) != 1 || !is.character(name))
+  if (length(name) != 1 || !is.character(name)) {
     rlang::abort("`name` should be a single character value.")
+  }
 
   recipes::recipes_pkg_check("nabor")
 
@@ -142,16 +146,16 @@ prep.step_geodist3d <- function(x, training, info = NULL, ...) {
 #'   matrix for multiple locations with (n_locations, n_distances).
 #' @keywords internal
 geo_dist_3d_calc <- function(x, a, b, c) {
-  apply(x, 1, function(x, a, b, c)  {
-    sqrt((x[1] - a) ^ 2 + (x[2] - b) ^ 2 + (x[3] - c) ^ 2)
+  apply(x, 1, function(x, a, b, c) {
+    sqrt((x[1] - a)^2 + (x[2] - b)^2 + (x[3] - c)^2)
   },
-  a = a, b = b, c = c)
+  a = a, b = b, c = c
+  )
 }
 
 
 #' @export
 bake.step_geodist3d <- function(object, new_data, ...) {
-
   if (isFALSE(object$minimum)) {
     dist_vals <- geo_dist_3d_calc(
       x = new_data[, object$columns],
@@ -159,7 +163,6 @@ bake.step_geodist3d <- function(object, new_data, ...) {
       b = object$ref_lon,
       c = object$ref_height
     )
-
   } else {
     refs <- tibble(
       y = object$ref_lat,
@@ -174,11 +177,13 @@ bake.step_geodist3d <- function(object, new_data, ...) {
     dist_vals <- as.numeric(nn$nn.dists)
   }
 
-  if (object$log)
+  if (object$log) {
     dist_vals <- log(dist_vals)
+  }
 
-  if (inherits(dist_vals, "numeric"))
+  if (inherits(dist_vals, "numeric")) {
     new_data[[object$name]] <- dist_vals
+  }
 
   if (inherits(dist_vals, "matrix")) {
     dist_vals <- as.data.frame(t(dist_vals))
@@ -193,11 +198,13 @@ bake.step_geodist3d <- function(object, new_data, ...) {
 #' @export
 print.step_geodist3d <-
   function(x, width = max(20, options()$width - 30), ...) {
-    cat("Geographical distances from",
-        format(x$ref_lat, digits = 10),
-        format(x$ref_lon, digits = 10),
-        format(x$ref_height, digits = 10),
-        "\n")
+    cat(
+      "Geographical distances from",
+      format(x$ref_lat, digits = 10),
+      format(x$ref_lon, digits = 10),
+      format(x$ref_height, digits = 10),
+      "\n"
+    )
     invisible(x)
   }
 

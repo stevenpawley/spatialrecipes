@@ -27,7 +27,6 @@ return_knn_classdists <- function(formula, x, y, k) {
         nabor::knn(data = train_data[query_rows, ], query = query_data, k = k + 1)
       neighbors$nn.idx <- neighbors$nn.idx[, 2:ncol(neighbors$nn.idx)]
       neighbors$nn.dists <- neighbors$nn.dists[, 2:ncol(neighbors$nn.dists)]
-
     } else {
       neighbors <-
         nabor::knn(data = train_data[query_rows, ], query = query_data, k = k)
@@ -82,22 +81,21 @@ return_knn_classdists <- function(formula, x, y, k) {
 #' @return An updated version of `recipe` with the new step added to the
 #'   sequence of existing steps (if any).
 #' @export
-step_knn_classdist <- function(
-  recipe, ...,
-  class = NULL,
-  role = "predictor",
-  neighbors = 3,
-  trained = FALSE,
-  data = NULL,
-  columns = NULL,
-  skip = FALSE,
-  id = recipes::rand_id("knn_classdist")) {
-
+step_knn_classdist <- function(recipe, ...,
+                               class = NULL,
+                               role = "predictor",
+                               neighbors = 3,
+                               trained = FALSE,
+                               data = NULL,
+                               columns = NULL,
+                               skip = FALSE,
+                               id = recipes::rand_id("knn_classdist")) {
   recipes::recipes_pkg_check("nabor")
   terms <- recipes::ellipse_check(...)
 
-  if (neighbors <= 0)
+  if (neighbors <= 0) {
     rlang::abort("`neighbors` should be greater than 0.")
+  }
 
   recipes::add_step(
     recipe,
@@ -141,17 +139,21 @@ prep.step_knn_classdist <- function(x, training, info = NULL, ...) {
   class_name <- x$class
 
   # Check selections
-  if (!inherits(training[[class_name]], "factor"))
+  if (!inherits(training[[class_name]], "factor")) {
     rlang::abort("The selected `class` must be a factor variable")
+  }
 
   col_types <- sapply(col_names, function(nm) inherits(training[[nm]], "numeric"))
-  if (!all(col_types))
+
+  if (!all(col_types)) {
     rlang::abort("`step_knn_classdist` can only be applied to numeric features")
+  }
 
   n_per_class <- table(training[[class_name]])
 
-  if (!all(n_per_class >= x$neighbors + 1))
+  if (!all(n_per_class >= x$neighbors + 1)) {
     rlang::abort("There needs to be >= neighbors+1 cases")
+  }
 
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE
@@ -171,7 +173,8 @@ prep.step_knn_classdist <- function(x, training, info = NULL, ...) {
 #' @export
 bake.step_knn_classdist <- function(object, new_data, ...) {
   f <- as.formula(
-    paste(object$class, paste(object$columns, collapse = " + "), sep = " ~ "))
+    paste(object$class, paste(object$columns, collapse = " + "), sep = " ~ ")
+  )
 
   new_X <- return_knn_classdists(
     formula = f,

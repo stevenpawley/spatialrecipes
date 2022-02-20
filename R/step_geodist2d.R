@@ -44,17 +44,19 @@ step_geodist2d <-
            columns = NULL,
            skip = FALSE,
            id = recipes::rand_id("geodist2d")) {
-
     vect_lengths <- c(length(ref_lon), length(ref_lat))
 
-    if (!all(vect_lengths == vect_lengths[1]))
+    if (!all(vect_lengths == vect_lengths[1])) {
       rlang::abort("`ref_lon`, and `ref_lat` should be the same length.")
+    }
 
-    if (length(log) != 1 || !is.logical(log))
+    if (length(log) != 1 || !is.logical(log)) {
       rlang::abort("`log` should be a single logical value.")
+    }
 
-    if (length(name) != 1 || !is.character(name))
+    if (length(name) != 1 || !is.character(name)) {
       rlang::abort("`name` should be a single character value.")
+    }
 
     recipes::recipes_pkg_check("nabor")
 
@@ -91,7 +93,6 @@ step_geodist2d_new <-
            columns,
            skip,
            id) {
-
     recipes::step(
       subclass = "geodist2d",
       lon = lon,
@@ -142,33 +143,42 @@ prep.step_geodist2d <- function(x, training, info = NULL, ...) {
 #'   matrix for multiple locations with (n_locations, n_distances).
 #' @keywords internal
 geo_dist_2d_calc <- function(x, a, b) {
-  apply(x, 1, function(x, a, b, c)  {
-    sqrt((x[1] - a) ^ 2 + (x[2] - b) ^ 2)
+  apply(x, 1, function(x, a, b, c) {
+    sqrt((x[1] - a)^2 + (x[2] - b)^2)
   },
-  a = a, b = b)
+  a = a, b = b
+  )
 }
 
 
 #' @export
 bake.step_geodist2d <- function(object, new_data, ...) {
   if (isFALSE(object$minimum)) {
-    dist_vals <- geo_dist_2d_calc(x = new_data[, object$columns],
-                                  a = object$ref_lat,
-                                  b = object$ref_lon)
+    dist_vals <- geo_dist_2d_calc(
+      x = new_data[, object$columns],
+      a = object$ref_lat,
+      b = object$ref_lon
+    )
   } else {
-    refs <- tibble(y = object$ref_lat,
-                   x = object$ref_lon)
-    nn <- nabor::knn(data = as.matrix(refs),
-                     query = as.matrix(new_data[, object$columns]),
-                     k = 1)
+    refs <- tibble(
+      y = object$ref_lat,
+      x = object$ref_lon
+    )
+    nn <- nabor::knn(
+      data = as.matrix(refs),
+      query = as.matrix(new_data[, object$columns]),
+      k = 1
+    )
     dist_vals <- as.numeric(nn$nn.dists)
   }
 
-  if (object$log)
+  if (object$log) {
     dist_vals <- log(dist_vals)
+  }
 
-  if (inherits(dist_vals, "numeric"))
+  if (inherits(dist_vals, "numeric")) {
     new_data[[object$name]] <- dist_vals
+  }
 
   if (inherits(dist_vals, "matrix")) {
     dist_vals <- as.data.frame(t(dist_vals))

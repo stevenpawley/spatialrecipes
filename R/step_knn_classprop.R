@@ -14,7 +14,6 @@ knn_class_proportions <- function(formula, x, y, k) {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k + 1)
     neighbors$nn.idx <- neighbors$nn.idx[, 2:ncol(neighbors$nn.idx)]
     neighbors$nn.dists <- neighbors$nn.dists[, 2:ncol(neighbors$nn.dists)]
-
   } else {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k)
   }
@@ -87,28 +86,27 @@ knn_class_proportions <- function(formula, x, y, k) {
 #' data(ames)
 #'
 #' rec_obj <- ames %>%
-#' recipe(Sale_Price ~ Latitude + Longitude) %>%
-#' step_knn_classprop(Latitude, Longitude, class = "Sale_Price", neighbors = 3)
+#'   recipe(Sale_Price ~ Latitude + Longitude) %>%
+#'   step_knn_classprop(Latitude, Longitude, class = "Sale_Price", neighbors = 3)
 #'
 #' prepped <- prep(rec_obj)
 #' juice(prepped)
-step_knn_classprop <- function(
-  recipe, ...,
-  class = NULL,
-  role = "predictor",
-  trained = FALSE,
-  neighbors = 3,
-  data = NULL,
-  columns = NULL,
-  skip = FALSE,
-  id = recipes::rand_id("knn_classprop")) {
-
+step_knn_classprop <- function(recipe, ...,
+                               class = NULL,
+                               role = "predictor",
+                               trained = FALSE,
+                               neighbors = 3,
+                               data = NULL,
+                               columns = NULL,
+                               skip = FALSE,
+                               id = recipes::rand_id("knn_classprop")) {
   recipes::recipes_pkg_check("nabor")
 
   terms <- recipes::ellipse_check(...)
 
-  if (neighbors <= 1)
+  if (neighbors <= 1) {
     rlang::abort("`neighbors` should be greater than 1.")
+  }
 
   recipes::add_step(
     recipe,
@@ -128,7 +126,7 @@ step_knn_classprop <- function(
 
 # wrapper around 'step' function that sets the class of new step objects
 step_knn_classprop_new <- function(terms, role, trained, class, neighbors,
-                         data, columns, skip, id) {
+                                   data, columns, skip, id) {
   recipes::step(
     subclass = "knn_classprop",
     terms = terms,

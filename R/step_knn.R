@@ -18,7 +18,6 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k + 1)
     neighbors$nn.idx <- neighbors$nn.idx[, 2:ncol(neighbors$nn.idx)]
     neighbors$nn.dists <- neighbors$nn.dists[, 2:ncol(neighbors$nn.dists)]
-
   } else {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k)
   }
@@ -35,8 +34,7 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
   neighbor_vals <- matrix(neighbor_vals, ncol = k)
 
   # calculate weights
-  W <- switch(
-    weight_func,
+  W <- switch(weight_func,
     inv = 1 / W^dist_power,
     rectangular = matrix(1, nrow = nrow(neighbor_vals), ncol = k),
     gaussian = gaussian_kernel(W, dist_power)
@@ -44,12 +42,12 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 
   # calculate weighted mean/mode of neighbors
   if (inherits(x[[target_variable]], "numeric")) {
-    fitted <- sapply(seq_len(nrow(W)), function(i)
-      weighted.mean(x = neighbor_vals[i,], w = W[i,]))
-
+    fitted <- sapply(seq_len(nrow(W)), function(i) {
+      weighted.mean(x = neighbor_vals[i, ], w = W[i, ])
+    })
   } else {
     fitted <- sapply(seq_len(nrow(W)), function(i) {
-      collapse::fmode(x = neighbor_vals[i,], w = W[i, ])
+      collapse::fmode(x = neighbor_vals[i, ], w = W[i, ])
     })
 
     target_type <- typeof(x[[target_variable]])
@@ -115,34 +113,36 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 #' data(ames)
 #'
 #' rec_obj <- ames %>%
-#' recipe(Sale_Price ~ Latitude + Longitude) %>%
-#' step_knn(Latitude, Longitude, outcome = "Sale_Price", neighbors = 3,
-#'                  weight_func = "inv", dist_power = 2)
+#'   recipe(Sale_Price ~ Latitude + Longitude) %>%
+#'   step_knn(Latitude, Longitude,
+#'     outcome = "Sale_Price", neighbors = 3,
+#'     weight_func = "inv", dist_power = 2
+#'   )
 #'
 #' prepped <- prep(rec_obj)
 #' juice(prepped)
-step_knn <- function(
-  recipe, ...,
-  outcome = NULL,
-  role = "predictor",
-  trained = FALSE,
-  neighbors = 3,
-  weight_func = "rectangular",
-  dist_power = 2,
-  data = NULL,
-  columns = NULL,
-  skip = FALSE,
-  id = recipes::rand_id("knn")) {
-
+step_knn <- function(recipe, ...,
+                     outcome = NULL,
+                     role = "predictor",
+                     trained = FALSE,
+                     neighbors = 3,
+                     weight_func = "rectangular",
+                     dist_power = 2,
+                     data = NULL,
+                     columns = NULL,
+                     skip = FALSE,
+                     id = recipes::rand_id("knn")) {
   recipes::recipes_pkg_check("nabor")
 
   terms <- recipes::ellipse_check(...)
 
-  if (neighbors <= 0)
+  if (neighbors <= 0) {
     rlang::abort("`neighbors` should be greater than 0.")
+  }
 
-  if (!weight_func %in% c("inv", "gaussian", "rectangular"))
+  if (!weight_func %in% c("inv", "gaussian", "rectangular")) {
     rlang::abort("`weight_func` should be either 'inv', 'gaussian', or 'rectangular'")
+  }
 
   recipes::add_step(
     recipe,
@@ -251,8 +251,8 @@ tidy.step_knn <- function(x, ...) {
   )
 
   if (recipes::is_trained(x)) {
-    res$means = x$means
-    res$sds = x$sds
+    res$means <- x$means
+    res$sds <- x$sds
   }
 
   res
