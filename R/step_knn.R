@@ -2,6 +2,10 @@ gaussian_kernel <- function(X, std = 2) {
   exp(-X^2 / std^2)
 }
 
+optKernel <- function(k, d = 1){
+  1 / k * (1 + d / 2 - d / (2 * k^(2 / d)) * ((1:k)^(1 + 2 / d) - (0:(k - 1))^(1 + 2 / d)))
+}
+
 knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
   target_variable <-
     rlang::f_lhs(formula) %>%
@@ -34,11 +38,23 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
   neighbor_vals <- matrix(neighbor_vals, ncol = k)
 
   # calculate weights
+  mf <- model.frame(formula, data = train_data)
+  mt <- attr(mf, "terms")
+  d <- sum(attr(mt, "order"))
+
   W <- switch(
     weight_func,
+    rank = (k + 1) - t(apply(as.matrix(D), 1, rank)),
     inv = 1 / W^dist_power,
     rectangular = matrix(1, nrow = nrow(neighbor_vals), ncol = k),
-    gaussian = gaussian_kernel(W, dist_power)
+    triangular = 1-W,
+    epanechnikov = 0.75 * (1 - W^2),
+    biweight = dbeta((W + 1) / 2, 3, 3),
+    triweight = dbeta((W + 1) / 2, 4, 4),
+    cos = cos(W * pi / 2),
+    triweights = 1,
+    gaussian = gaussian_kernel(W, dist_power),
+    optimal = rep(optKernel(k, d = d), each = dim(query_data)[1])
   )
 
   # calculate weighted mean/mode of neighbors
@@ -188,7 +204,7 @@ prep.step_knn <- function(x, training, info = NULL, ...) {
     terms = x$terms,
     role = x$role,
     trained = TRUE,
-    outcome = x$outcome,
+    outcome = outcome,
     neighbors = x$neighbors,
     weight_func = x$weight_func,
     dist_power = x$dist_power,
