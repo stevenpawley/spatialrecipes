@@ -98,7 +98,8 @@ step_clusterdist_new <-
 #' @export
 prep.step_clusterdist <- function(x, training, info = NULL, ...) {
   col_names <- recipes::terms_select(terms = x$terms, info = info)
-  km <- kmeans(training[col_names], centers = x$num_comp)
+  km <- kmeans(training[col_names], centers = x$num_comp, algorithm = "Lloyd",
+               iter.max = 1000)
 
   step_clusterdist_new(
     terms = x$terms,
