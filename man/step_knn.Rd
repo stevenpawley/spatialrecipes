@@ -29,9 +29,9 @@ step_knn(
 affected by the step. See selections() for more details. For the tidy
 method, these are not currently used.}
 
-\item{outcome}{Selector function to choose which variable will be used to
-create a new feature based on the unweighted or distance-weighted mean of
-surrounding observations.}
+\item{outcome}{Character, name of which variable will be used to create a new
+feature based on the unweighted or distance-weighted mean of surrounding
+observations.}
 
 \item{role}{role or model term created by this step, what analysis role
 should be assigned?. By default, the function assumes that resulting
@@ -85,9 +85,11 @@ library(spatialrecipes)
 data(ames)
 
 rec_obj <- ames \%>\%
-recipe(Sale_Price ~ Latitude + Longitude) \%>\%
-step_knn(Latitude, Longitude, outcome = "Sale_Price", neighbors = 3,
-                 weight_func = "inv", dist_power = 2)
+  recipe(Sale_Price ~ Latitude + Longitude) \%>\%
+  step_knn(Latitude, Longitude,
+    outcome = "Sale_Price", neighbors = 3,
+    weight_func = "inv", dist_power = 2
+  )
 
 prepped <- prep(rec_obj)
 juice(prepped)

@@ -71,8 +71,8 @@ library(spatialrecipes)
 data(ames)
 
 rec_obj <- ames \%>\%
-recipe(Sale_Price ~ Latitude + Longitude) \%>\%
-step_knn_classprop(Latitude, Longitude, class = "Sale_Price", neighbors = 3)
+  recipe(Sale_Price ~ Latitude + Longitude) \%>\%
+  step_knn_classprop(Latitude, Longitude, class = "Sale_Price", neighbors = 3)
 
 prepped <- prep(rec_obj)
 juice(prepped)
