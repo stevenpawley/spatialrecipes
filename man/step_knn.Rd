@@ -13,7 +13,6 @@ step_knn(
   trained = FALSE,
   neighbors = 3,
   weight_func = "rectangular",
-  dist_power = 2,
   data = NULL,
   columns = NULL,
   skip = FALSE,
@@ -45,8 +44,6 @@ weighting.}
 \item{weight_func}{A single character for the kernel function used to weight
 the distances between samples. The default is 'rectangular' and the available
 choices are 'rectangular', 'inv', 'gaussian'.}
-
-\item{dist_power}{Power function for "inv". The default is 2.}
 
 \item{data}{Used internally to store the training data.}
 
@@ -88,7 +85,7 @@ rec_obj <- ames \%>\%
   recipe(Sale_Price ~ Latitude + Longitude) \%>\%
   step_knn(Latitude, Longitude,
     outcome = "Sale_Price", neighbors = 3,
-    weight_func = "inv", dist_power = 2
+    weight_func = "inv"
   )
 
 prepped <- prep(rec_obj)

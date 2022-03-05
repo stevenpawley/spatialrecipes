@@ -1,15 +1,13 @@
-gaussian_kernel <- function(X, std = 2) {
-  exp(-X^2 / std^2)
+gaussian_kernel <- function(distances, sigma = 2) {
+  distances_norm <- distances / rowSums(distances)
+  exp(-distances^2 / sigma^2)
 }
 
-optKernel <- function(k, d = 1){
-  1 / k * (1 + d / 2 - d / (2 * k^(2 / d)) * ((1:k)^(1 + 2 / d) - (0:(k - 1))^(1 + 2 / d)))
-}
-
-knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
+knn_train <- function(formula, x, y, k, weight_func) {
   target_variable <-
     rlang::f_lhs(formula) %>%
     as.character()
+
   term_variables <- attr(terms(formula, data = x), "term.labels")
 
   # split data
@@ -29,37 +27,26 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
   # get ids and distances to neighbors
   neighbor_ids <- neighbors$nn.idx
   D <- neighbors$nn.dists
-
-  # create initial row-standardized weights
-  W <- D / rowSums(D)
+  D[D < 1e-6] <- 1e-6
 
   # get values of neighbors
   neighbor_vals <- x[as.integer(neighbor_ids), ][[target_variable]]
   neighbor_vals <- matrix(neighbor_vals, ncol = k)
 
   # calculate weights
-  d <- ncol(train_data)
-
   W <- switch(
     weight_func,
-    rank = (k + 1) - t(apply(as.matrix(D), 1, rank)),
-    inv = 1 / W^dist_power,
+    inv = 1 / D,
     rectangular = matrix(1, nrow = nrow(neighbor_vals), ncol = k),
-    triangular = 1 - W,
-    epanechnikov = 0.75 * (1 - W^2),
-    biweight = dbeta((W + 1) / 2, 3, 3),
-    triweight = dbeta((W + 1) / 2, 4, 4),
-    cos = cos(W * pi / 2),
-    triweights = 1,
-    gaussian = gaussian_kernel(W, dist_power),
-    optimal = matrix(rep(optKernel(k, d = d), each = nrow(query_data)), ncol = k)
+    gaussian = gaussian_kernel(D, 2)
   )
 
   # calculate weighted mean/mode of neighbors
   if (inherits(x[[target_variable]], "numeric")) {
-    fitted <- sapply(seq_len(nrow(W)), function(i) {
-      weighted.mean(x = neighbor_vals[i, ], w = W[i, ])
-    })
+    denom <- rowSums(W)
+    num <- rowSums(neighbor_vals * W)
+    fitted <- num / denom
+
   } else {
     fitted <- sapply(seq_len(nrow(W)), function(i) {
       collapse::fmode(x = neighbor_vals[i, ], w = W[i, ])
@@ -99,9 +86,8 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 #' @param neighbors The number of closest neighbours to use in the distance
 #'   weighting.
 #' @param weight_func A single character for the kernel function used to weight
-#'   the distances between samples. The default is 'rectangular' and the available
-#'   choices are 'rectangular', 'inv', 'gaussian'.
-#' @param dist_power Power function for "inv". The default is 2.
+#'   the distances between samples. The default is 'rectangular' and the
+#'   available choices are 'rectangular', 'inv', 'gaussian'.
 #' @param data Used internally to store the training data.
 #' @param columns A character string that contains the names of columns used in the
 #' transformation. This is `NULL` until computed by `prep.recipe()`.
@@ -131,7 +117,7 @@ knn_train <- function(formula, x, y, k, weight_func, dist_power = 2) {
 #'   recipe(Sale_Price ~ Latitude + Longitude) %>%
 #'   step_knn(Latitude, Longitude,
 #'     outcome = "Sale_Price", neighbors = 3,
-#'     weight_func = "inv", dist_power = 2
+#'     weight_func = "inv"
 #'   )
 #'
 #' prepped <- prep(rec_obj)
@@ -142,7 +128,6 @@ step_knn <- function(recipe, ...,
                      trained = FALSE,
                      neighbors = 3,
                      weight_func = "rectangular",
-                     dist_power = 2,
                      data = NULL,
                      columns = NULL,
                      skip = FALSE,
@@ -163,7 +148,6 @@ step_knn <- function(recipe, ...,
       role = role,
       neighbors = neighbors,
       weight_func = weight_func,
-      dist_power = dist_power,
       data = data,
       columns = columns,
       skip = skip,
@@ -174,7 +158,7 @@ step_knn <- function(recipe, ...,
 
 # wrapper around 'step' function that sets the class of new step objects
 step_knn_new <- function(terms, role, trained, outcome, neighbors,
-                         weight_func, dist_power, data, columns, skip, id) {
+                         weight_func, data, columns, skip, id) {
   recipes::step(
     subclass = "knn",
     terms = terms,
@@ -183,7 +167,6 @@ step_knn_new <- function(terms, role, trained, outcome, neighbors,
     outcome = outcome,
     neighbors = neighbors,
     weight_func = weight_func,
-    dist_power = dist_power,
     data = data,
     columns = columns,
     skip = skip,
@@ -205,7 +188,6 @@ prep.step_knn <- function(x, training, info = NULL, ...) {
     outcome = x$outcome,
     neighbors = x$neighbors,
     weight_func = x$weight_func,
-    dist_power = x$dist_power,
     data = training,
     columns = col_names,
     skip = x$skip,
@@ -224,8 +206,7 @@ bake.step_knn <- function(object, new_data, ...) {
     x = object$data,
     y = new_data,
     k = object$neighbors,
-    weight_func = object$weight_func,
-    dist_power = object$dist_power
+    weight_func = object$weight_func
   )
 
   new_data <- dplyr::bind_cols(new_data, lags)
@@ -255,8 +236,7 @@ tidy.step_knn <- function(x, ...) {
     id = rep(x$id, times = length(term_names)),
     terms = term_names,
     neighbors = rep(x$neighbors, times = length(term_names)),
-    weight_func = rep(x$weight_func, times = length(term_names)),
-    dist_power = rep(x$dist_power, times = length(term_names))
+    weight_func = rep(x$weight_func, times = length(term_names))
   )
 
   if (recipes::is_trained(x)) {
@@ -270,11 +250,10 @@ tidy.step_knn <- function(x, ...) {
 #' @export
 tunable.step_knn <- function(x, ...) {
   tibble::tibble(
-    name = c("neighbors", "weight_func", "dist_power"),
+    name = c("neighbors", "weight_func"),
     call_info = list(
       list(pkg = "dials", fun = "neighbors", range = c(1L, 10L)),
-      list(pkg = "dials", fun = "weight_func", values = dials::values_weight_func),
-      list(pkg = "dials", fun = "dist_power", range = c(1, 2))
+      list(pkg = "dials", fun = "weight_func", values = c("rectangular", "inv", "gaussian"))
     ),
     source = "recipe",
     component = "step_knn",
