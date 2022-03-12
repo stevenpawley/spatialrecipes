@@ -153,10 +153,6 @@ step_spatial_lag <- function(recipe, ...,
     rlang::abort("`neighbors` should be greater than 0.")
   }
 
-  if (!weight_func %in% c("rectangular", "inv", "gaussian")) {
-    rlang::abort("`weight_func` should be one of `rectangular`, `gaussian`, `inv`")
-  }
-
   recipes::add_step(
     recipe,
     step_spatial_lag_new(
