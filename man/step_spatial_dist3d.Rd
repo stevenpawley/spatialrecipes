@@ -17,10 +17,10 @@ step_spatial_dist3d(
   log = FALSE,
   role = "predictor",
   trained = FALSE,
-  name = "geo_dist3d",
+  name = "spatial_dist3d",
   columns = NULL,
   skip = FALSE,
-  id = recipes::rand_id("geodist3d")
+  id = recipes::rand_id("spatial_dist3d")
 )
 
 \method{tidy}{step_spatial_dist3d}(x, ...)

@@ -75,7 +75,7 @@ step_spatial_neighbors <- function(recipe, ...,
                                    data = NULL,
                                    columns = NULL,
                                    skip = FALSE,
-                                   id = recipes::rand_id("neighbors")) {
+                                   id = recipes::rand_id("spatial_neighbors")) {
   if (!"nabor" %in% installed.packages()[, 1]) {
     stop("step_spatial_neighbors requires the package `nabor` to be installed")
   }

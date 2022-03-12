@@ -4,7 +4,7 @@ data("Sacramento")
 test_that("test step_knn_classdist basic", {
   rec_obj <- Sacramento %>%
     recipe(price ~ .) %>%
-    step_knn_classdist(latitude, longitude, class = "type", neighbors = 1)
+    step_spatial_classdist(latitude, longitude, class = "type", neighbors = 1)
 
   prepped <- prep(rec_obj)
   result <- juice(prepped)

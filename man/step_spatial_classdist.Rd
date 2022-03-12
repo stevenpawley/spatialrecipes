@@ -14,7 +14,7 @@ step_spatial_classdist(
   data = NULL,
   columns = NULL,
   skip = FALSE,
-  id = recipes::rand_id("knn_classdist")
+  id = recipes::rand_id("spatial_classdist")
 )
 }
 \arguments{

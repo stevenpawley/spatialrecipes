@@ -41,10 +41,10 @@ step_spatial_dist3d <- function(recipe,
                            log = FALSE,
                            role = "predictor",
                            trained = FALSE,
-                           name = "geo_dist3d",
+                           name = "spatial_dist3d",
                            columns = NULL,
                            skip = FALSE,
-                           id = recipes::rand_id("geodist3d")) {
+                           id = recipes::rand_id("spatial_dist3d")) {
   vect_lengths <- c(length(ref_lon), length(ref_lat), length(ref_height))
 
   if (!all(vect_lengths == vect_lengths[1])) {
@@ -91,7 +91,7 @@ step_spatial_dist3d_new <-
   function(lon, lat, height, role, trained, ref_lon, ref_lat, ref_height,
            minimum, log, name, columns, skip, id) {
     recipes::step(
-      subclass = "geodist3d",
+      subclass = "spatial_dist3d",
       lon = lon,
       lat = lat,
       height = height,

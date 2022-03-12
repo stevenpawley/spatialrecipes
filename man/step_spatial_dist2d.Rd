@@ -15,10 +15,10 @@ step_spatial_dist2d(
   log = FALSE,
   role = "predictor",
   trained = FALSE,
-  name = "geo_dist2d",
+  name = "spatial_dist2d",
   columns = NULL,
   skip = FALSE,
-  id = recipes::rand_id("geodist2d")
+  id = recipes::rand_id("spatial_dist2d")
 )
 
 \method{tidy}{step_spatial_dist2d}(x, ...)

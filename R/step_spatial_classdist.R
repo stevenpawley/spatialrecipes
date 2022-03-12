@@ -89,7 +89,7 @@ step_spatial_classdist <- function(recipe, ...,
                                    data = NULL,
                                    columns = NULL,
                                    skip = FALSE,
-                                   id = recipes::rand_id("knn_classdist")) {
+                                   id = recipes::rand_id("spatial_classdist")) {
   recipes::recipes_pkg_check("nabor")
   terms <- recipes::ellipse_check(...)
 
@@ -118,7 +118,7 @@ step_spatial_classdist <- function(recipe, ...,
 step_spatial_classdist_new <- function(terms, role, trained, class, neighbors,
                                        data, columns, skip, id) {
   recipes::step(
-    subclass = "knn_classdist",
+    subclass = "spatial_classdist",
     terms = terms,
     role = role,
     trained = trained,

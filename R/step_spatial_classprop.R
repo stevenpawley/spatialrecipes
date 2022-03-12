@@ -99,7 +99,7 @@ step_spatial_classprop <- function(recipe, ...,
                                    data = NULL,
                                    columns = NULL,
                                    skip = FALSE,
-                                   id = recipes::rand_id("knn_classprop")) {
+                                   id = recipes::rand_id("spatial_classprop")) {
   recipes::recipes_pkg_check("nabor")
 
   terms <- recipes::ellipse_check(...)
@@ -128,7 +128,7 @@ step_spatial_classprop <- function(recipe, ...,
 step_spatial_classprop_new <- function(terms, role, trained, class, neighbors,
                                        data, columns, skip, id) {
   recipes::step(
-    subclass = "knn_classprop",
+    subclass = "spatial_classprop",
     terms = terms,
     role = role,
     trained = trained,

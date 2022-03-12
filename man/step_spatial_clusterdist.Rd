@@ -13,11 +13,11 @@ step_spatial_clusterdist(
   num_comp = 5,
   role = "predictor",
   trained = FALSE,
-  name = "clusterdist",
+  name = "spatial_clusterdist",
   columns = NULL,
   centers = NULL,
   skip = FALSE,
-  id = recipes::rand_id("clusterdist")
+  id = recipes::rand_id("spatial_clusterdist")
 )
 
 \method{tidy}{step_spatial_clusterdist}(x, ...)

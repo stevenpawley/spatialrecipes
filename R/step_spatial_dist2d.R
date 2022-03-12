@@ -40,10 +40,10 @@ step_spatial_dist2d <-
            log = FALSE,
            role = "predictor",
            trained = FALSE,
-           name = "geo_dist2d",
+           name = "spatial_dist2d",
            columns = NULL,
            skip = FALSE,
-           id = recipes::rand_id("geodist2d")) {
+           id = recipes::rand_id("spatial_dist2d")) {
     vect_lengths <- c(length(ref_lon), length(ref_lat))
 
     if (!all(vect_lengths == vect_lengths[1])) {
@@ -94,7 +94,7 @@ step_spatial_dist2d_new <-
            skip,
            id) {
     recipes::step(
-      subclass = "geodist2d",
+      subclass = "spatial_dist2d",
       lon = lon,
       lat = lat,
       role = role,
