@@ -108,10 +108,6 @@ knn_train <- function(formula, x, y, k, weight_func) {
 #' @param data Used internally to store the training data.
 #' @param columns A character string that contains the names of columns used in
 #'   the transformation. This is `NULL` until computed by `prep.recipe()`.
-#' @param means A named numeric vector of means. This is `NULL` until computed
-#'   by `prep.recipe()`.
-#' @param sds A named numeric vector of standard deviations. This is `NULL`
-#'   until computed by `prep.recipe()`.
 #' @param skip A logical to skip training.
 #' @param id An identifier for the step. If omitted then this is generated
 #'   automatically.

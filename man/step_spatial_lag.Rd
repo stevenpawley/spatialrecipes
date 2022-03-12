@@ -56,12 +56,6 @@ the transformation. This is `NULL` until computed by `prep.recipe()`.}
 automatically.}
 
 \item{x}{A `step_spatial_lag` object.}
-
-\item{means}{A named numeric vector of means. This is `NULL` until computed
-by `prep.recipe()`.}
-
-\item{sds}{A named numeric vector of standard deviations. This is `NULL`
-until computed by `prep.recipe()`.}
 }
 \value{
 An updated version of `recipe` with the new step added to the
