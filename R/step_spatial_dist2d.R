@@ -1,6 +1,6 @@
 #' Distance between locations in two dimensions
 #'
-#' `step_geodist2d` creates a *specification* of a recipe step that will
+#' `step_spatial_dist2d` creates a *specification* of a recipe step that will
 #' calculate the distance between points on a map to a reference location.
 #'
 #' @param lon,lat Selector functions to choose which variables are affected by
@@ -30,7 +30,7 @@
 #' @keywords datagen
 #' @concept preprocessing
 #' @export
-step_geodist2d <-
+step_spatial_dist2d <-
   function(recipe,
            lat = NULL,
            lon = NULL,
@@ -62,7 +62,7 @@ step_geodist2d <-
 
     recipes::add_step(
       recipe,
-      step_geodist2d_new(
+      step_spatial_dist2d_new(
         lon = rlang::enquos(lon),
         lat = rlang::enquos(lat),
         role = role,
@@ -80,7 +80,7 @@ step_geodist2d <-
   }
 
 
-step_geodist2d_new <-
+step_spatial_dist2d_new <-
   function(lon,
            lat,
            role,
@@ -112,11 +112,11 @@ step_geodist2d_new <-
 
 
 #' @export
-prep.step_geodist2d <- function(x, training, info = NULL, ...) {
+prep.step_spatial_dist2d <- function(x, training, info = NULL, ...) {
   lat_name <- recipes::terms_select(terms = x$lat, info = info)
   lon_name <- recipes::terms_select(terms = x$lon, info = info)
 
-  step_geodist2d_new(
+  step_spatial_dist2d_new(
     lon = x$lon,
     lat = x$lat,
     role = x$role,
@@ -152,7 +152,7 @@ geo_dist_2d_calc <- function(x, a, b) {
 
 
 #' @export
-bake.step_geodist2d <- function(object, new_data, ...) {
+bake.step_spatial_dist2d <- function(object, new_data, ...) {
   if (isFALSE(object$minimum)) {
     dist_vals <- geo_dist_2d_calc(
       x = new_data[, object$columns],
@@ -192,7 +192,7 @@ bake.step_geodist2d <- function(object, new_data, ...) {
 }
 
 
-print.step_geodist2d <-
+print.step_spatial_dist2d <-
   function(x, width = max(20, options()$width - 30), ...) {
     cat(
       "Geographical distances from",
@@ -205,10 +205,10 @@ print.step_geodist2d <-
 
 
 
-#' @rdname step_geodist2d
-#' @param x A `step_geodist2d` object.
+#' @rdname step_spatial_dist2d
+#' @param x A `step_spatial_dist2d` object.
 #' @export
-tidy.step_geodist2d <- function(x, ...) {
+tidy.step_spatial_dist2d <- function(x, ...) {
   if (is_trained(x)) {
     res <- tibble(
       latitude = x$columns[1],

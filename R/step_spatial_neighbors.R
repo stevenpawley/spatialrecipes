@@ -13,7 +13,6 @@ return_neighbours <- function(formula, x, y, k) {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k + 1)
     neighbors$nn.idx <- neighbors$nn.idx[, 2:ncol(neighbors$nn.idx)]
     neighbors$nn.dists <- neighbors$nn.dists[, 2:ncol(neighbors$nn.dists)]
-
   } else {
     neighbors <- nabor::knn(data = train_data, query = query_data, k = k)
   }
@@ -41,7 +40,7 @@ return_neighbours <- function(formula, x, y, k) {
 
 #' Spatial si step
 #'
-#' `step_neighbors` creates a *specification* of a recipe step that will add a new
+#' `step_spatial_neighbors` creates a *specification* of a recipe step that will add a new
 #' 'si' features to a dataset based on the inverse distance-weighted mean of
 #' surrounding observations.
 #'
@@ -68,29 +67,29 @@ return_neighbours <- function(formula, x, y, k) {
 #' @return An updated version of `recipe` with the new step added to the
 #'   sequence of existing steps (if any).
 #' @export
-step_neighbors <- function(
-  recipe, ...,
-  outcome = NULL,
-  role = "predictor",
-  trained = FALSE,
-  neighbors = 3,
-  data = NULL,
-  columns = NULL,
-  skip = FALSE,
-  id = recipes::rand_id("neighbors")) {
-
-  if (!"nabor" %in% installed.packages()[, 1])
-    stop("step_neighbors requires the package `nabor` to be installed")
+step_spatial_neighbors <- function(recipe, ...,
+                                   outcome = NULL,
+                                   role = "predictor",
+                                   trained = FALSE,
+                                   neighbors = 3,
+                                   data = NULL,
+                                   columns = NULL,
+                                   skip = FALSE,
+                                   id = recipes::rand_id("neighbors")) {
+  if (!"nabor" %in% installed.packages()[, 1]) {
+    stop("step_spatial_neighbors requires the package `nabor` to be installed")
+  }
 
   recipes::recipes_pkg_check("nabor")
   terms <- recipes::ellipse_check(...)
 
-  if (neighbors <= 0)
+  if (neighbors <= 0) {
     rlang::abort("`neighbors` should be greater than 0.")
+  }
 
   recipes::add_step(
     recipe,
-    step_neighbors_new(
+    step_spatial_neighbors_new(
       terms = terms,
       outcome = rlang::enquos(outcome),
       neighbors = neighbors,
@@ -106,8 +105,8 @@ step_neighbors <- function(
 
 
 # wrapper around 'step' function that sets the class of new step objects
-step_neighbors_new <- function(terms, role, trained, outcome, neighbors,
-                               data, columns, skip, id) {
+step_spatial_neighbors_new <- function(terms, role, trained, outcome, neighbors,
+                                       data, columns, skip, id) {
   recipes::step(
     subclass = "neighbors",
     terms = terms,
@@ -123,7 +122,7 @@ step_neighbors_new <- function(terms, role, trained, outcome, neighbors,
 }
 
 #' @export
-prep.step_neighbors <- function(x, training, info = NULL, ...) {
+prep.step_spatial_neighbors <- function(x, training, info = NULL, ...) {
 
   # First translate the terms argument into column name
   col_names <- terms_select(terms = x$terms, info = info)
@@ -131,7 +130,7 @@ prep.step_neighbors <- function(x, training, info = NULL, ...) {
 
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE
-  step_neighbors_new(
+  step_spatial_neighbors_new(
     terms = x$terms,
     role = x$role,
     trained = TRUE,
@@ -145,24 +144,24 @@ prep.step_neighbors <- function(x, training, info = NULL, ...) {
 }
 
 #' @export
-bake.step_neighbors <- function(object, new_data, ...) {
-
+bake.step_spatial_neighbors <- function(object, new_data, ...) {
   f <- as.formula(
-    paste(object$outcome, paste(object$columns, collapse = " + "), sep = " ~ "))
+    paste(object$outcome, paste(object$columns, collapse = " + "), sep = " ~ ")
+  )
 
   new_X <- return_neighbours(
-      formula = f,
-      x = object$data,
-      y = new_data,
-      k = object$neighbors
-    )
+    formula = f,
+    x = object$data,
+    y = new_data,
+    k = object$neighbors
+  )
 
   new_data <- dplyr::bind_cols(new_data, new_X)
   new_data
 }
 
 #' @export
-tidy.step_neighbors <- function(x, ...) {
+tidy.step_spatial_neighbors <- function(x, ...) {
   res <- tibble::tibble(
     terms = recipes::sel2char(x$terms),
     outcome = x$outcome,
@@ -173,14 +172,14 @@ tidy.step_neighbors <- function(x, ...) {
 }
 
 #' @export
-tunable.step_neighbors <- function(x, ...) {
+tunable.step_spatial_neighbors <- function(x, ...) {
   tibble::tibble(
     name = c("neighbors"),
     call_info = list(
       list(pkg = "dials", fun = "neighbors", range = c(1, 10))
     ),
     source = "recipe",
-    component = "step_neighbors",
+    component = "step_spatial_neighbors",
     component_id = x$id
   )
 }

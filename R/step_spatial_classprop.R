@@ -47,7 +47,7 @@ knn_class_proportions <- function(formula, x, y, k) {
 
 #' Spatial class proportions
 #'
-#' `step_knn_classprop` creates a *specification* of a recipe step that will add
+#' `step_spatial_classprop` creates a *specification* of a recipe step that will add
 #' a new features to a dataset based on the proportion of each class in the
 #' surrounding observations.
 #'
@@ -87,19 +87,19 @@ knn_class_proportions <- function(formula, x, y, k) {
 #'
 #' rec_obj <- ames %>%
 #'   recipe(Sale_Price ~ Latitude + Longitude) %>%
-#'   step_knn_classprop(Latitude, Longitude, class = "Sale_Price", neighbors = 3)
+#'   step_spatial_classprop(Latitude, Longitude, class = "Sale_Price", neighbors = 3)
 #'
 #' prepped <- prep(rec_obj)
 #' juice(prepped)
-step_knn_classprop <- function(recipe, ...,
-                               class = NULL,
-                               role = "predictor",
-                               trained = FALSE,
-                               neighbors = 3,
-                               data = NULL,
-                               columns = NULL,
-                               skip = FALSE,
-                               id = recipes::rand_id("knn_classprop")) {
+step_spatial_classprop <- function(recipe, ...,
+                                   class = NULL,
+                                   role = "predictor",
+                                   trained = FALSE,
+                                   neighbors = 3,
+                                   data = NULL,
+                                   columns = NULL,
+                                   skip = FALSE,
+                                   id = recipes::rand_id("knn_classprop")) {
   recipes::recipes_pkg_check("nabor")
 
   terms <- recipes::ellipse_check(...)
@@ -110,7 +110,7 @@ step_knn_classprop <- function(recipe, ...,
 
   recipes::add_step(
     recipe,
-    step_knn_classprop_new(
+    step_spatial_classprop_new(
       terms = terms,
       class = rlang::enquos(class),
       trained = trained,
@@ -125,8 +125,8 @@ step_knn_classprop <- function(recipe, ...,
 }
 
 # wrapper around 'step' function that sets the class of new step objects
-step_knn_classprop_new <- function(terms, role, trained, class, neighbors,
-                                   data, columns, skip, id) {
+step_spatial_classprop_new <- function(terms, role, trained, class, neighbors,
+                                       data, columns, skip, id) {
   recipes::step(
     subclass = "knn_classprop",
     terms = terms,
@@ -142,14 +142,14 @@ step_knn_classprop_new <- function(terms, role, trained, class, neighbors,
 }
 
 #' @export
-prep.step_knn_classprop <- function(x, training, info = NULL, ...) {
+prep.step_spatial_classprop <- function(x, training, info = NULL, ...) {
   # First translate the terms argument into column name
   col_names <- recipes::terms_select(terms = x$terms, info = info)
   class_name <- recipes::terms_select(x$class, info = info)
 
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE
-  step_knn_classprop_new(
+  step_spatial_classprop_new(
     terms = x$terms,
     role = x$role,
     trained = TRUE,
@@ -163,7 +163,7 @@ prep.step_knn_classprop <- function(x, training, info = NULL, ...) {
 }
 
 #' @export
-bake.step_knn_classprop <- function(object, new_data, ...) {
+bake.step_spatial_classprop <- function(object, new_data, ...) {
   f <- as.formula(
     paste(object$class, paste(object$columns, collapse = " + "), sep = " ~ ")
   )
@@ -180,7 +180,7 @@ bake.step_knn_classprop <- function(object, new_data, ...) {
 }
 
 #' @export
-print.step_knn_classprop <-
+print.step_spatial_classprop <-
   function(x, width = max(20, options()$width - 30), ...) {
     cat("Spatial lags")
 
@@ -192,10 +192,10 @@ print.step_knn_classprop <-
     invisible(x)
   }
 
-#' @rdname step_knn_classprop
-#' @param x A `step_knn_classprop` object.
+#' @rdname step_spatial_classprop
+#' @param x A `step_spatial_classprop` object.
 #' @export
-tidy.step_knn_classprop <- function(x, ...) {
+tidy.step_spatial_classprop <- function(x, ...) {
   term_names <- sel2char(x$terms)
 
   res <- tibble(
@@ -208,14 +208,14 @@ tidy.step_knn_classprop <- function(x, ...) {
 }
 
 #' @export
-tunable.step_knn_classprop <- function(x, ...) {
+tunable.step_spatial_classprop <- function(x, ...) {
   tibble::tibble(
     name = c("neighbors", "weight_func", "dist_power"),
     call_info = list(
       list(pkg = "dials", fun = "neighbors", range = c(1L, 10L))
     ),
     source = "recipe",
-    component = "step_knn_classprop",
+    component = "step_spatial_classprop",
     component_id = x$id
   )
 }

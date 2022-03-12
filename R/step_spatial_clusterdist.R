@@ -1,6 +1,6 @@
 #' Distance between locations in two dimensions
 #'
-#' `step_clusterdist` creates a *specification* of a recipe step that will
+#' `step_spatial_clusterdist` creates a *specification* of a recipe step that will
 #' calculate the distance between points on a map to a reference location.
 #'
 #' @param ... One or more selector functions to choose which variables are
@@ -28,7 +28,7 @@
 #' @keywords datagen
 #' @concept preprocessing
 #' @export
-step_clusterdist <-
+step_spatial_clusterdist <-
   function(recipe,
            ...,
            ref_lon,
@@ -49,7 +49,7 @@ step_clusterdist <-
 
     recipes::add_step(
       recipe,
-      step_clusterdist_new(
+      step_spatial_clusterdist_new(
         terms = terms,
         ref_lon = ref_lon,
         ref_lat = ref_lat,
@@ -66,7 +66,7 @@ step_clusterdist <-
   }
 
 
-step_clusterdist_new <-
+step_spatial_clusterdist_new <-
   function(terms,
            ref_lon,
            ref_lat,
@@ -96,12 +96,14 @@ step_clusterdist_new <-
 
 
 #' @export
-prep.step_clusterdist <- function(x, training, info = NULL, ...) {
+prep.step_spatial_clusterdist <- function(x, training, info = NULL, ...) {
   col_names <- recipes::terms_select(terms = x$terms, info = info)
-  km <- kmeans(training[col_names], centers = x$num_comp, algorithm = "Lloyd",
-               iter.max = 1000)
+  km <- kmeans(training[col_names],
+    centers = x$num_comp, algorithm = "Lloyd",
+    iter.max = 1000
+  )
 
-  step_clusterdist_new(
+  step_spatial_clusterdist_new(
     terms = x$terms,
     ref_lon = x$ref_lon,
     ref_lat = x$ref_lat,
@@ -117,28 +119,27 @@ prep.step_clusterdist <- function(x, training, info = NULL, ...) {
 }
 
 #' @export
-bake.step_clusterdist <- function(object, new_data, ...) {
-  geo_dist_2d_calc = function(df, a, b) {
-    apply(df, 1, function(x, a, b, c)  {
-      sqrt((x[1] - a) ^ 2 + (x[2] - b) ^ 2)
+bake.step_spatial_clusterdist <- function(object, new_data, ...) {
+  geo_dist_2d_calc <- function(df, a, b) {
+    apply(df, 1, function(x, a, b, c) {
+      sqrt((x[1] - a)^2 + (x[2] - b)^2)
     },
-    a = a, b = b)
+    a = a, b = b
+    )
   }
 
-  cols = c(object$ref_lon, object$ref_lat)
+  cols <- c(object$ref_lon, object$ref_lat)
 
-  dist_vals = geo_dist_2d_calc(
+  dist_vals <- geo_dist_2d_calc(
     df = new_data[, cols],
     a = object$centers[[object$ref_lon]],
     b = object$centers[[object$ref_lat]]
   )
 
   if (inherits(dist_vals, "numeric")) {
-    dist_vals = tibble(dist_vals)
+    dist_vals <- tibble(dist_vals)
     names(dist_vals) <- object$name
-  }
-
-  else if (inherits(dist_vals, "matrix")) {
+  } else if (inherits(dist_vals, "matrix")) {
     dist_vals <- as.data.frame(t(dist_vals))
     dist_vals <- setNames(
       dist_vals,
@@ -149,7 +150,7 @@ bake.step_clusterdist <- function(object, new_data, ...) {
   bind_cols(new_data, dist_vals)
 }
 
-print.step_clusterdist <-
+print.step_spatial_clusterdist <-
   function(x, width = max(20, options()$width - 30), ...) {
     cat(
       "Geographical distances from",
@@ -160,10 +161,10 @@ print.step_clusterdist <-
     invisible(x)
   }
 
-#' @rdname step_clusterdist
-#' @param x A `step_clusterdist` object.
+#' @rdname step_spatial_clusterdist
+#' @param x A `step_spatial_clusterdist` object.
 #' @export
-tidy.step_clusterdist <- function(x, ...) {
+tidy.step_spatial_clusterdist <- function(x, ...) {
   if (is_trained(x)) {
     res <- tibble(
       terms = x$columns,
@@ -184,14 +185,14 @@ tidy.step_clusterdist <- function(x, ...) {
 }
 
 #' @export
-tunable.step_clusterdist <- function(x, ...) {
+tunable.step_spatial_clusterdist <- function(x, ...) {
   tibble::tibble(
     name = c("num_comp"),
     call_info = list(
       list(pkg = "dials", fun = "num_comp", range = c(1L, 10L))
     ),
     source = "recipe",
-    component = "step_clusterdist",
+    component = "step_spatial_clusterdist",
     component_id = x$id
   )
 }

@@ -1,6 +1,25 @@
+gaussian_kernel <- function(distances, k) {
+  alpha <- 1 / (2 * k)
+  qua <- abs(qnorm(alpha))
+
+  maxdist <- distances[, k]
+  maxdist[maxdist < 1.0e-6] <- 1.0e-6
+
+  W <- distances / maxdist
+  W <- pmin(W, 1 - (1e-6))
+  W <- pmax(W, 1e-6)
+
+
+  W <- W * qua
+  W <- dnorm(W, sd = 1)
+
+  return(W)
+}
+
 gaussian_kernel <- function(distances, sigma = 2) {
-  distances_norm <- distances / rowSums(distances)
-  exp(-distances^2 / sigma^2)
+  maxdist <- apply(distances, 1, max)
+  distances_norm <- distances / maxdist
+  exp(-distances_norm^2 / sigma^2)
 }
 
 knn_train <- function(formula, x, y, k, weight_func) {
@@ -34,8 +53,7 @@ knn_train <- function(formula, x, y, k, weight_func) {
   neighbor_vals <- matrix(neighbor_vals, ncol = k)
 
   # calculate weights
-  W <- switch(
-    weight_func,
+  W <- switch(weight_func,
     inv = 1 / D,
     rectangular = matrix(1, nrow = nrow(neighbor_vals), ncol = k),
     gaussian = gaussian_kernel(D, 2)
@@ -46,7 +64,6 @@ knn_train <- function(formula, x, y, k, weight_func) {
     denom <- rowSums(W)
     num <- rowSums(neighbor_vals * W)
     fitted <- num / denom
-
   } else {
     fitted <- sapply(seq_len(nrow(W)), function(i) {
       collapse::fmode(x = neighbor_vals[i, ], w = W[i, ])
@@ -68,9 +85,9 @@ knn_train <- function(formula, x, y, k, weight_func) {
 
 #' Spatial lag step
 #'
-#' `step_knn` creates a *specification* of a recipe step that will add a
-#' new 'lag' feature to a dataset based on the weighted or unweighted mean or mode of
-#' neighbouring observations.
+#' `step_spatial_lag` creates a *specification* of a recipe step that will add a
+#' new 'lag' feature to a dataset based on the weighted or unweighted mean or
+#' mode of neighbouring observations.
 #'
 #' @param recipe A recipe.
 #' @param ... One or more selector functions to choose which variables are
@@ -89,12 +106,12 @@ knn_train <- function(formula, x, y, k, weight_func) {
 #'   the distances between samples. The default is 'rectangular' and the
 #'   available choices are 'rectangular', 'inv', 'gaussian'.
 #' @param data Used internally to store the training data.
-#' @param columns A character string that contains the names of columns used in the
-#' transformation. This is `NULL` until computed by `prep.recipe()`.
-#' @param means A named numeric vector of means. This is `NULL` until computed by
-#' `prep.recipe()`.
-#' @param sds A named numeric vector of standard deviations. This is `NULL` until
-#'   computed by `prep.recipe()`.
+#' @param columns A character string that contains the names of columns used in
+#'   the transformation. This is `NULL` until computed by `prep.recipe()`.
+#' @param means A named numeric vector of means. This is `NULL` until computed
+#'   by `prep.recipe()`.
+#' @param sds A named numeric vector of standard deviations. This is `NULL`
+#'   until computed by `prep.recipe()`.
 #' @param skip A logical to skip training.
 #' @param id An identifier for the step. If omitted then this is generated
 #'   automatically.
@@ -115,23 +132,23 @@ knn_train <- function(formula, x, y, k, weight_func) {
 #'
 #' rec_obj <- ames %>%
 #'   recipe(Sale_Price ~ Latitude + Longitude) %>%
-#'   step_knn(Latitude, Longitude,
+#'   step_spatial_lag(Latitude, Longitude,
 #'     outcome = "Sale_Price", neighbors = 3,
 #'     weight_func = "inv"
 #'   )
 #'
 #' prepped <- prep(rec_obj)
 #' juice(prepped)
-step_knn <- function(recipe, ...,
-                     outcome = NULL,
-                     role = "predictor",
-                     trained = FALSE,
-                     neighbors = 3,
-                     weight_func = "rectangular",
-                     data = NULL,
-                     columns = NULL,
-                     skip = FALSE,
-                     id = recipes::rand_id("knn")) {
+step_spatial_lag <- function(recipe, ...,
+                             outcome = NULL,
+                             role = "predictor",
+                             trained = FALSE,
+                             neighbors = 3,
+                             weight_func = "rectangular",
+                             data = NULL,
+                             columns = NULL,
+                             skip = FALSE,
+                             id = recipes::rand_id("spatial_lag")) {
   recipes::recipes_pkg_check("nabor")
 
   terms <- recipes::ellipse_check(...)
@@ -139,9 +156,14 @@ step_knn <- function(recipe, ...,
   if (neighbors <= 0) {
     rlang::abort("`neighbors` should be greater than 0.")
   }
+
+  if (!weight_func %in% c("rectangular", "inv", "gaussian")) {
+    rlang::abort("`weight_func` should be one of `rectangular`, `gaussian`, `inv`")
+  }
+
   recipes::add_step(
     recipe,
-    step_knn_new(
+    step_spatial_lag_new(
       terms = terms,
       outcome = outcome,
       trained = trained,
@@ -157,10 +179,10 @@ step_knn <- function(recipe, ...,
 }
 
 # wrapper around 'step' function that sets the class of new step objects
-step_knn_new <- function(terms, role, trained, outcome, neighbors,
-                         weight_func, data, columns, skip, id) {
+step_spatial_lag_new <- function(terms, role, trained, outcome, neighbors,
+                                 weight_func, data, columns, skip, id) {
   recipes::step(
-    subclass = "knn",
+    subclass = "spatial_lag",
     terms = terms,
     role = role,
     trained = trained,
@@ -175,13 +197,13 @@ step_knn_new <- function(terms, role, trained, outcome, neighbors,
 }
 
 #' @export
-prep.step_knn <- function(x, training, info = NULL, ...) {
+prep.step_spatial_lag <- function(x, training, info = NULL, ...) {
   # First translate the terms argument into column name
   col_names <- recipes::terms_select(terms = x$terms, info = info)
 
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE
-  step_knn_new(
+  step_spatial_lag_new(
     terms = x$terms,
     role = x$role,
     trained = TRUE,
@@ -196,7 +218,7 @@ prep.step_knn <- function(x, training, info = NULL, ...) {
 }
 
 #' @export
-bake.step_knn <- function(object, new_data, ...) {
+bake.step_spatial_lag <- function(object, new_data, ...) {
   f <- as.formula(
     paste(object$outcome, paste(object$columns, collapse = " + "), sep = " ~ ")
   )
@@ -214,22 +236,19 @@ bake.step_knn <- function(object, new_data, ...) {
 }
 
 #' @export
-print.step_knn <-
+print.step_spatial_lag <-
   function(x, width = max(20, options()$width - 30), ...) {
     cat("Spatial lags")
-
-    if (recipes::is_trained(x)) {
-      cat(paste0(" (", x$neighbors, " neighbors)"))
-    }
+    cat(paste0(" (", x$neighbors, " neighbors)"))
     cat("\n")
 
     invisible(x)
   }
 
-#' @rdname step_knn
-#' @param x A `step_knn` object.
+#' @rdname step_spatial_lag
+#' @param x A `step_spatial_lag` object.
 #' @export
-tidy.step_knn <- function(x, ...) {
+tidy.step_spatial_lag <- function(x, ...) {
   term_names <- sel2char(x$terms)
 
   res <- tibble(
@@ -239,16 +258,11 @@ tidy.step_knn <- function(x, ...) {
     weight_func = rep(x$weight_func, times = length(term_names))
   )
 
-  if (recipes::is_trained(x)) {
-    res$means <- x$means
-    res$sds <- x$sds
-  }
-
   res
 }
 
 #' @export
-tunable.step_knn <- function(x, ...) {
+tunable.step_spatial_lag <- function(x, ...) {
   tibble::tibble(
     name = c("neighbors", "weight_func"),
     call_info = list(
@@ -256,7 +270,7 @@ tunable.step_knn <- function(x, ...) {
       list(pkg = "dials", fun = "weight_func", values = c("rectangular", "inv", "gaussian"))
     ),
     source = "recipe",
-    component = "step_knn",
+    component = "step_spatial_lag",
     component_id = x$id
   )
 }

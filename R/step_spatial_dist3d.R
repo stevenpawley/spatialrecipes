@@ -1,6 +1,6 @@
 #' Distance between locations in three dimensions
 #'
-#' `step_geodist3d` creates a *specification* of a recipe step that will
+#' `step_spatial_dist3d` creates a *specification* of a recipe step that will
 #' calculate the distance between points on a map to a reference location.
 #'
 #' @param lon,lat,height Selector functions to choose which variables are
@@ -30,7 +30,7 @@
 #' @keywords datagen
 #' @concept preprocessing
 #' @export
-step_geodist3d <- function(recipe,
+step_spatial_dist3d <- function(recipe,
                            lat = NULL,
                            lon = NULL,
                            height = NULL,
@@ -67,7 +67,7 @@ step_geodist3d <- function(recipe,
 
   recipes::add_step(
     recipe,
-    step_geodist3d_new(
+    step_spatial_dist3d_new(
       lon = rlang::enquos(lon),
       lat = rlang::enquos(lat),
       height = rlang::enquos(height),
@@ -87,7 +87,7 @@ step_geodist3d <- function(recipe,
 }
 
 
-step_geodist3d_new <-
+step_spatial_dist3d_new <-
   function(lon, lat, height, role, trained, ref_lon, ref_lat, ref_height,
            minimum, log, name, columns, skip, id) {
     recipes::step(
@@ -111,12 +111,12 @@ step_geodist3d_new <-
 
 
 #' @export
-prep.step_geodist3d <- function(x, training, info = NULL, ...) {
+prep.step_spatial_dist3d <- function(x, training, info = NULL, ...) {
   lat_name <- recipes::terms_select(terms = x$lat, info = info)
   lon_name <- recipes::terms_select(terms = x$lon, info = info)
   height_name <- recipes::terms_select(terms = x$height, info = info)
 
-  step_geodist3d_new(
+  step_spatial_dist3d_new(
     lon = x$lon,
     lat = x$lat,
     height = x$height,
@@ -155,7 +155,7 @@ geo_dist_3d_calc <- function(x, a, b, c) {
 
 
 #' @export
-bake.step_geodist3d <- function(object, new_data, ...) {
+bake.step_spatial_dist3d <- function(object, new_data, ...) {
   if (isFALSE(object$minimum)) {
     dist_vals <- geo_dist_3d_calc(
       x = new_data[, object$columns],
@@ -196,7 +196,7 @@ bake.step_geodist3d <- function(object, new_data, ...) {
 }
 
 #' @export
-print.step_geodist3d <-
+print.step_spatial_dist3d <-
   function(x, width = max(20, options()$width - 30), ...) {
     cat(
       "Geographical distances from",
@@ -210,10 +210,10 @@ print.step_geodist3d <-
 
 
 
-#' @rdname step_geodist3d
-#' @param x A `step_geodist3d` object.
+#' @rdname step_spatial_dist3d
+#' @param x A `step_spatial_dist3d` object.
 #' @export
-tidy.step_geodist3d <- function(x, ...) {
+tidy.step_spatial_dist3d <- function(x, ...) {
   if (is_trained(x)) {
     res <- tibble(
       latitude = x$columns[1],
