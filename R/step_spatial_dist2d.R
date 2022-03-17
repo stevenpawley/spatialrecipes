@@ -113,8 +113,8 @@ step_spatial_dist2d_new <-
 
 #' @export
 prep.step_spatial_dist2d <- function(x, training, info = NULL, ...) {
-  lat_name <- recipes::terms_select(terms = x$lat, info = info)
-  lon_name <- recipes::terms_select(terms = x$lon, info = info)
+  lat_name <- recipes::recipes_eval_select(x$lat, training, info)
+  lon_name <- recipes::recipes_eval_select(x$lon, training, info)
 
   step_spatial_dist2d_new(
     lon = x$lon,

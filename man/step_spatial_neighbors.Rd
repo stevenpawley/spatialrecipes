@@ -14,7 +14,7 @@ step_spatial_neighbors(
   data = NULL,
   columns = NULL,
   skip = FALSE,
-  id = recipes::rand_id("neighbors")
+  id = recipes::rand_id("spatial_neighbors")
 )
 }
 \arguments{
@@ -28,9 +28,9 @@ method, these are not currently used.}
 create a new feature based on the inverse distance-weighted mean of
 surrounding observations.}
 
-\item{role}{role or model term created by this step, what analysis
-role should be assigned?. By default, the function assumes
-that resulting distance will be used as a predictor in a model.}
+\item{role}{role or model term created by this step, what analysis role
+should be assigned?. By default, the function assumes that resulting
+distance will be used as a predictor in a model.}
 
 \item{trained}{A logical that will be updated once the step has been trained.}
 
@@ -39,8 +39,8 @@ weighting. The default is 3.}
 
 \item{data}{Used internally to store the training data.}
 
-\item{columns}{A character string that contains the names of columns used in the
-transformation. This is `NULL` until computed by `prep.recipe()`.}
+\item{columns}{A character string that contains the names of columns used in
+the transformation. This is `NULL` until computed by `prep.recipe()`.}
 
 \item{skip}{A logical to skip training.}
 
@@ -52,7 +52,7 @@ An updated version of `recipe` with the new step added to the
   sequence of existing steps (if any).
 }
 \description{
-`step_spatial_neighbors` creates a *specification* of a recipe step that will add a new
-'si' features to a dataset based on the inverse distance-weighted mean of
-surrounding observations.
+`step_spatial_neighbors` creates a *specification* of a recipe step that will
+add a new 'si' features to a dataset based on the inverse distance-weighted
+mean of surrounding observations.
 }

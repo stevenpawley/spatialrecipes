@@ -144,8 +144,8 @@ step_spatial_classprop_new <- function(terms, role, trained, class, neighbors,
 #' @export
 prep.step_spatial_classprop <- function(x, training, info = NULL, ...) {
   # First translate the terms argument into column name
-  col_names <- recipes::terms_select(terms = x$terms, info = info)
-  class_name <- recipes::terms_select(x$class, info = info)
+  col_names <- recipes::recipes_eval_select(x$terms, training, info)
+  class_name <- recipes::recipes_eval_select(x$class, training, info)
 
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE

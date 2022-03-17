@@ -112,9 +112,9 @@ step_spatial_dist3d_new <-
 
 #' @export
 prep.step_spatial_dist3d <- function(x, training, info = NULL, ...) {
-  lat_name <- recipes::terms_select(terms = x$lat, info = info)
-  lon_name <- recipes::terms_select(terms = x$lon, info = info)
-  height_name <- recipes::terms_select(terms = x$height, info = info)
+  lat_name <- recipes::recipes_eval_select(x$lat, training, info)
+  lon_name <- recipes::recipes_eval_select(x$lon, training, info)
+  height_name <- recipes::recipes_eval_select(x$height, training, info)
 
   step_spatial_dist3d_new(
     lon = x$lon,

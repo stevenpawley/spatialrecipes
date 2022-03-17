@@ -135,7 +135,7 @@ step_spatial_classdist_new <- function(terms, role, trained, class, neighbors,
 prep.step_spatial_classdist <- function(x, training, info = NULL, ...) {
 
   # First translate the terms argument into column name
-  col_names <- terms_select(terms = x$terms, info = info)
+  col_names <- recipes_eval_select(x$terms, training, info = info)
   class_name <- x$class
 
   # Check selections

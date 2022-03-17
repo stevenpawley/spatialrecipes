@@ -38,11 +38,11 @@ return_neighbours <- function(formula, x, y, k) {
 }
 
 
-#' Spatial si step
+#' Spatial neighbors step
 #'
-#' `step_spatial_neighbors` creates a *specification* of a recipe step that will add a new
-#' 'si' features to a dataset based on the inverse distance-weighted mean of
-#' surrounding observations.
+#' `step_spatial_neighbors` creates a *specification* of a recipe step that will
+#' add a new 'si' features to a dataset based on the inverse distance-weighted
+#' mean of surrounding observations.
 #'
 #' @param recipe A recipe.
 #' @param ... One or more selector functions to choose which variables are
@@ -53,13 +53,13 @@ return_neighbours <- function(formula, x, y, k) {
 #'   surrounding observations.
 #' @param neighbors The number of closest neighbors to use in the distance
 #'   weighting. The default is 3.
-#' @param role role or model term created by this step, what analysis
-#'  role should be assigned?. By default, the function assumes
-#'  that resulting distance will be used as a predictor in a model.
+#' @param role role or model term created by this step, what analysis role
+#'   should be assigned?. By default, the function assumes that resulting
+#'   distance will be used as a predictor in a model.
 #' @param trained A logical that will be updated once the step has been trained.
 #' @param data Used internally to store the training data.
-#' @param columns A character string that contains the names of columns used in the
-#' transformation. This is `NULL` until computed by `prep.recipe()`.
+#' @param columns A character string that contains the names of columns used in
+#'   the transformation. This is `NULL` until computed by `prep.recipe()`.
 #' @param skip A logical to skip training.
 #' @param id An identifier for the step. If omitted then this is generated
 #' automatically.
@@ -108,7 +108,7 @@ step_spatial_neighbors <- function(recipe, ...,
 step_spatial_neighbors_new <- function(terms, role, trained, outcome, neighbors,
                                        data, columns, skip, id) {
   recipes::step(
-    subclass = "neighbors",
+    subclass = "spatial_neighbors",
     terms = terms,
     role = role,
     trained = trained,
@@ -123,10 +123,9 @@ step_spatial_neighbors_new <- function(terms, role, trained, outcome, neighbors,
 
 #' @export
 prep.step_spatial_neighbors <- function(x, training, info = NULL, ...) {
-
   # First translate the terms argument into column name
-  col_names <- terms_select(terms = x$terms, info = info)
-  outcome_name <- terms_select(x$outcome, info = info)
+  col_names <- recipes_eval_select(x$terms, training, info)
+  outcome_name <- recipes_eval_select(x$outcome, training, info)
 
   # Use the constructor function to return the updated object
   # Note that `trained` is set to TRUE

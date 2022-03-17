@@ -15,7 +15,7 @@ step_spatial_classprop(
   data = NULL,
   columns = NULL,
   skip = FALSE,
-  id = recipes::rand_id("knn_classprop")
+  id = recipes::rand_id("spatial_classprop")
 )
 
 \method{tidy}{step_spatial_classprop}(x, ...)

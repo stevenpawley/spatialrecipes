@@ -97,7 +97,7 @@ step_spatial_clusterdist_new <-
 
 #' @export
 prep.step_spatial_clusterdist <- function(x, training, info = NULL, ...) {
-  col_names <- recipes::terms_select(terms = x$terms, info = info)
+  col_names <- recipes::recipes_eval_select(x$terms, training, info)
   km <- kmeans(training[col_names],
     centers = x$num_comp, algorithm = "Lloyd",
     iter.max = 1000
