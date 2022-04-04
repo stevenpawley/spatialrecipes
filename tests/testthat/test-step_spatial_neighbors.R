@@ -7,7 +7,7 @@ test_that("test step_spatial_neighbors basic", {
     step_spatial_neighbors(latitude, longitude, outcome = "type", neighbors = 3)
 
   prepped <- prep(rec_obj)
-  result <- juice(prepped)
+  result <- bake(prepped, new_data = NULL)
 
   expect_true(all(
     c(
