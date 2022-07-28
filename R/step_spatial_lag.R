@@ -9,7 +9,6 @@ gaussian_kernel <- function(distances, k) {
   W <- pmin(W, 1 - (1e-6))
   W <- pmax(W, 1e-6)
 
-
   W <- W * qua
   W <- dnorm(W, sd = 1)
 

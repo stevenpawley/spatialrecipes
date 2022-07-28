@@ -9,6 +9,8 @@ test_that("test step_spatial_lag", {
 
   prepped <- prep(rec_obj)
   result <- juice(prepped)
-  testthat::expect_named(result, c("dist", "elev", "x", "y", "lead",
-                                   "lead_lag_3_gaussian"))
+  testthat::expect_named(result, c(
+    "dist", "elev", "x", "y", "lead",
+    "lead_lag_3_gaussian"
+  ))
 })

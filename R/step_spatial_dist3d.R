@@ -31,20 +31,20 @@
 #' @concept preprocessing
 #' @export
 step_spatial_dist3d <- function(recipe,
-                           lat = NULL,
-                           lon = NULL,
-                           height = NULL,
-                           ref_lat = NULL,
-                           ref_lon = NULL,
-                           ref_height = NULL,
-                           minimum = FALSE,
-                           log = FALSE,
-                           role = "predictor",
-                           trained = FALSE,
-                           name = "spatial_dist3d",
-                           columns = NULL,
-                           skip = FALSE,
-                           id = recipes::rand_id("spatial_dist3d")) {
+                                lat = NULL,
+                                lon = NULL,
+                                height = NULL,
+                                ref_lat = NULL,
+                                ref_lon = NULL,
+                                ref_height = NULL,
+                                minimum = FALSE,
+                                log = FALSE,
+                                role = "predictor",
+                                trained = FALSE,
+                                name = "spatial_dist3d",
+                                columns = NULL,
+                                skip = FALSE,
+                                id = recipes::rand_id("spatial_dist3d")) {
   vect_lengths <- c(length(ref_lon), length(ref_lat), length(ref_height))
 
   if (!all(vect_lengths == vect_lengths[1])) {
