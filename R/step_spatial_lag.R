@@ -1,26 +1,3 @@
-gaussian_kernel <- function(distances, k) {
-  alpha <- 1 / (2 * k)
-  qua <- abs(qnorm(alpha))
-
-  maxdist <- distances[, k]
-  maxdist[maxdist < 1.0e-6] <- 1.0e-6
-
-  W <- distances / maxdist
-  W <- pmin(W, 1 - (1e-6))
-  W <- pmax(W, 1e-6)
-
-  W <- W * qua
-  W <- dnorm(W, sd = 1)
-
-  return(W)
-}
-
-gaussian_kernel <- function(distances, sigma = 2) {
-  maxdist <- apply(distances, 1, max)
-  distances_norm <- distances / maxdist
-  exp(-distances_norm^2 / sigma^2)
-}
-
 knn_train <- function(formula, x, y, k, weight_func) {
   target_variable <-
     rlang::f_lhs(formula) %>%
@@ -55,7 +32,7 @@ knn_train <- function(formula, x, y, k, weight_func) {
   W <- switch(weight_func,
     inv = 1 / D,
     rectangular = matrix(1, nrow = nrow(neighbor_vals), ncol = k),
-    gaussian = gaussian_kernel(D, 2)
+    gaussian = gaussian_kernel(D, k)
   )
 
   # calculate weighted mean/mode of neighbors
