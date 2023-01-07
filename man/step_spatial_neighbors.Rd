@@ -11,6 +11,7 @@ step_spatial_neighbors(
   role = "predictor",
   trained = FALSE,
   neighbors = 3,
+  prefix = "nn",
   data = NULL,
   columns = NULL,
   skip = FALSE,
@@ -36,6 +37,8 @@ distance will be used as a predictor in a model.}
 
 \item{neighbors}{The number of closest neighbors to use in the distance
 weighting. The default is 3.}
+
+\item{prefix}{Prefix to use for the newly created variables. Default is "nn".}
 
 \item{data}{Used internally to store the training data.}
 

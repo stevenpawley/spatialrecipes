@@ -1,4 +1,4 @@
-return_neighbours <- function(formula, x, y, k) {
+return_neighbours <- function(formula, x, y, k, prefix = "nn") {
   target_variable <-
     rlang::f_lhs(formula) %>%
     as.character()
@@ -26,8 +26,8 @@ return_neighbours <- function(formula, x, y, k) {
   D <- matrix(D, ncol = k)
 
   # return as tibble
-  prefix <- paste("nn", target_variable, sep = "_")
-  prefix_dist <- paste("dist", target_variable, sep = "_")
+  prefix <- paste(prefix, target_variable, sep = "_")
+  prefix_dist <- paste(prefix, "dist", target_variable, sep = "_")
   colnames(W) <- paste(prefix, 1:ncol(W), sep = "_")
   colnames(D) <- paste(prefix_dist, 1:ncol(D), sep = "_")
 
@@ -53,6 +53,7 @@ return_neighbours <- function(formula, x, y, k) {
 #'   surrounding observations.
 #' @param neighbors The number of closest neighbors to use in the distance
 #'   weighting. The default is 3.
+#' @param prefix Prefix to use for the newly created variables. Default is "nn".
 #' @param role role or model term created by this step, what analysis role
 #'   should be assigned?. By default, the function assumes that resulting
 #'   distance will be used as a predictor in a model.
@@ -72,6 +73,7 @@ step_spatial_neighbors <- function(recipe, ...,
                                    role = "predictor",
                                    trained = FALSE,
                                    neighbors = 3,
+                                   prefix = "nn",
                                    data = NULL,
                                    columns = NULL,
                                    skip = FALSE,
@@ -93,6 +95,7 @@ step_spatial_neighbors <- function(recipe, ...,
       terms = terms,
       outcome = rlang::enquos(outcome),
       neighbors = neighbors,
+      prefix = prefix,
       trained = trained,
       role = role,
       data = data,
@@ -106,7 +109,7 @@ step_spatial_neighbors <- function(recipe, ...,
 
 # wrapper around 'step' function that sets the class of new step objects
 step_spatial_neighbors_new <- function(terms, role, trained, outcome, neighbors,
-                                       data, columns, skip, id) {
+                                       prefix, data, columns, skip, id) {
   recipes::step(
     subclass = "spatial_neighbors",
     terms = terms,
@@ -114,6 +117,7 @@ step_spatial_neighbors_new <- function(terms, role, trained, outcome, neighbors,
     trained = trained,
     outcome = outcome,
     neighbors = neighbors,
+    prefix = prefix,
     data = data,
     columns = columns,
     skip = skip,
@@ -135,6 +139,7 @@ prep.step_spatial_neighbors <- function(x, training, info = NULL, ...) {
     trained = TRUE,
     outcome = outcome_name,
     neighbors = x$neighbors,
+    prefix = x$prefix,
     data = training,
     columns = col_names,
     skip = x$skip,
@@ -152,7 +157,8 @@ bake.step_spatial_neighbors <- function(object, new_data, ...) {
     formula = f,
     x = object$data,
     y = new_data,
-    k = object$neighbors
+    k = object$neighbors,
+    prefix = object$prefix
   )
 
   new_data <- dplyr::bind_cols(new_data, new_X)
