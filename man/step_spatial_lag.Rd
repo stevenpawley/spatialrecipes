@@ -13,6 +13,7 @@ step_spatial_lag(
   trained = FALSE,
   neighbors = 3,
   weight_func = "rectangular",
+  prefix = "lag",
   data = NULL,
   columns = NULL,
   skip = FALSE,
@@ -44,6 +45,9 @@ weighting.}
 \item{weight_func}{A single character for the kernel function used to weight
 the distances between samples. The default is 'rectangular' and the
 available choices are 'rectangular', 'inv', 'gaussian'.}
+
+\item{prefix}{Name to use as prefix for the created variable. Default is
+'lag.}
 
 \item{data}{Used internally to store the training data.}
 

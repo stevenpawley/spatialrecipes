@@ -2,7 +2,7 @@
 % Please edit documentation in R/step_spatial_neighbors.R
 \name{step_spatial_neighbors}
 \alias{step_spatial_neighbors}
-\title{Spatial si step}
+\title{Spatial neighbors step}
 \usage{
 step_spatial_neighbors(
   recipe,

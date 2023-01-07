@@ -1,4 +1,4 @@
-knn_train <- function(formula, x, y, k, weight_func) {
+knn_train <- function(formula, x, y, k, weight_func, prefix = "lag") {
   target_variable <-
     rlang::f_lhs(formula) %>%
     as.character()
@@ -50,7 +50,7 @@ knn_train <- function(formula, x, y, k, weight_func) {
     fitted <- factor(fitted, levels = levels(x[[target_variable]]))
   }
 
-  new_feature_name <- paste(target_variable, "lag", k, weight_func, sep = "_")
+  new_feature_name <- paste(target_variable, prefix, k, weight_func, sep = "_")
 
   fitted <- tibble(fitted) %>%
     rlang::set_names(new_feature_name)
@@ -81,6 +81,8 @@ knn_train <- function(formula, x, y, k, weight_func) {
 #' @param weight_func A single character for the kernel function used to weight
 #'   the distances between samples. The default is 'rectangular' and the
 #'   available choices are 'rectangular', 'inv', 'gaussian'.
+#' @param prefix Name to use as prefix for the created variable. Default is
+#'   'lag.
 #' @param data Used internally to store the training data.
 #' @param columns A character string that contains the names of columns used in
 #'   the transformation. This is `NULL` until computed by `prep.recipe()`.
@@ -117,6 +119,7 @@ step_spatial_lag <- function(recipe, ...,
                              trained = FALSE,
                              neighbors = 3,
                              weight_func = "rectangular",
+                             prefix = "lag",
                              data = NULL,
                              columns = NULL,
                              skip = FALSE,
@@ -138,6 +141,7 @@ step_spatial_lag <- function(recipe, ...,
       role = role,
       neighbors = neighbors,
       weight_func = weight_func,
+      prefix = prefix,
       data = data,
       columns = columns,
       skip = skip,
@@ -148,7 +152,7 @@ step_spatial_lag <- function(recipe, ...,
 
 # wrapper around 'step' function that sets the class of new step objects
 step_spatial_lag_new <- function(terms, role, trained, outcome, neighbors,
-                                 weight_func, data, columns, skip, id) {
+                                 weight_func, prefix, data, columns, skip, id) {
   recipes::step(
     subclass = "spatial_lag",
     terms = terms,
@@ -157,6 +161,7 @@ step_spatial_lag_new <- function(terms, role, trained, outcome, neighbors,
     outcome = outcome,
     neighbors = neighbors,
     weight_func = weight_func,
+    prefix = prefix,
     data = data,
     columns = columns,
     skip = skip,
@@ -178,6 +183,7 @@ prep.step_spatial_lag <- function(x, training, info = NULL, ...) {
     outcome = x$outcome,
     neighbors = x$neighbors,
     weight_func = x$weight_func,
+    prefix = x$prefix,
     data = training,
     columns = col_names,
     skip = x$skip,
@@ -196,7 +202,8 @@ bake.step_spatial_lag <- function(object, new_data, ...) {
     x = object$data,
     y = new_data,
     k = object$neighbors,
-    weight_func = object$weight_func
+    weight_func = object$weight_func,
+    prefix = object$prefix
   )
 
   new_data <- dplyr::bind_cols(new_data, lags)
