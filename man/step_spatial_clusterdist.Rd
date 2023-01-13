@@ -8,8 +8,7 @@
 step_spatial_clusterdist(
   recipe,
   ...,
-  ref_lon,
-  ref_lat,
+  ref,
   num_comp = 5,
   role = "predictor",
   trained = FALSE,
@@ -27,11 +26,13 @@ step_spatial_clusterdist(
 affected by the step. See selections() for more details. For the tidy
 method, these are not currently used.}
 
-\item{ref_lon}{A character with the name of the column in the training data
-that represents that x-coordinate of the spatial domain.}
-
-\item{ref_lat}{A character with the name of the column in the training data
-that represents that y-coordinate of the spatial domain.}
+\item{ref}{A character with the name(s) of the columns in the training data
+that represents the spatial domain. For example,
+`ref = c("lat", "lon", "depth")` would calculate the centroids of clusters
+using the terms specified in the selector function, and then would measure
+the euclidean distances to these cluster centroids based on the `ref`
+variables. The variables specified in `ref` also need to be included
+as terms in the selector function.}
 
 \item{num_comp}{Number of clusters to generate.}
 
@@ -48,7 +49,7 @@ index of each reference location.}
 (eventually) by the `terms` argument.}
 
 \item{centers}{The cluster geographic locations of the cluster centroids
-based on `ref_lon,` `ref_lat` and the clusters generated from the columns
+based on `ref,` and the clusters generated from the columns
 specified by `terms`.}
 
 \item{x}{A `step_spatial_clusterdist` object.}
@@ -60,6 +61,21 @@ An updated version of `recipe` with the new step added to the
 \description{
 `step_spatial_clusterdist` creates a *specification* of a recipe step that will
 calculate the distance between points on a map to a reference location.
+}
+\examples{
+library(tidyverse)
+library(tidymodels)
+
+rec_obj <- Sacramento \%>\%
+recipe(price ~ .) \%>\%
+  step_spatial_clusterdist(
+    price, latitude, longitude,
+    ref = c("longitude", "latitude"),
+    num_comp = 5
+ )
+
+ prepped <- prep(rec_obj
+ bake(prepped, new_data = NULL)
 }
 \concept{preprocessing}
 \keyword{datagen}

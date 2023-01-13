@@ -6,10 +6,13 @@
 #' @param ... One or more selector functions to choose which variables are
 #'   affected by the step. See selections() for more details. For the tidy
 #'   method, these are not currently used.
-#' @param ref_lon A character with the name of the column in the training data
-#'   that represents that x-coordinate of the spatial domain.
-#' @param ref_lat A character with the name of the column in the training data
-#'   that represents that y-coordinate of the spatial domain.
+#' @param ref A character with the name(s) of the columns in the training data
+#'   that represents the spatial domain. For example,
+#'   `ref = c("lat", "lon", "depth")` would calculate the centroids of clusters
+#'   using the terms specified in the selector function, and then would measure
+#'   the euclidean distances to these cluster centroids based on the `ref`
+#'   variables. The variables specified in `ref` also need to be included
+#'   as terms in the selector function.
 #' @param num_comp Number of clusters to generate.
 #' @param role or model term created by this step, what analysis role should be
 #'   assigned?. By default, the function assumes that resulting distance will be
@@ -17,7 +20,7 @@
 #' @param columns A character string of variable names that will be populated
 #'   (eventually) by the `terms` argument.
 #' @param centers The cluster geographic locations of the cluster centroids
-#'   based on `ref_lon,` `ref_lat` and the clusters generated from the columns
+#'   based on `ref,` and the clusters generated from the columns
 #'   specified by `terms`.
 #' @param name A single character value to use for the new predictor column. If
 #'   a column exists with this name, an error is issued. If multiple clusters
@@ -28,11 +31,24 @@
 #' @keywords datagen
 #' @concept preprocessing
 #' @export
+#' @examples
+#' library(tidyverse)
+#' library(tidymodels)
+#'
+#' rec_obj <- Sacramento %>%
+#' recipe(price ~ .) %>%
+#'   step_spatial_clusterdist(
+#'     price, latitude, longitude,
+#'     ref = c("longitude", "latitude"),
+#'     num_comp = 5
+#'  )
+#'
+#'  prepped <- prep(rec_obj
+#'  bake(prepped, new_data = NULL)
 step_spatial_clusterdist <-
   function(recipe,
            ...,
-           ref_lon,
-           ref_lat,
+           ref,
            num_comp = 5,
            role = "predictor",
            trained = FALSE,
@@ -51,8 +67,7 @@ step_spatial_clusterdist <-
       recipe,
       step_spatial_clusterdist_new(
         terms = terms,
-        ref_lon = ref_lon,
-        ref_lat = ref_lat,
+        ref = ref,
         num_comp = num_comp,
         role = role,
         trained = trained,
@@ -68,8 +83,7 @@ step_spatial_clusterdist <-
 
 step_spatial_clusterdist_new <-
   function(terms,
-           ref_lon,
-           ref_lat,
+           ref,
            num_comp,
            role,
            trained,
@@ -81,8 +95,7 @@ step_spatial_clusterdist_new <-
     recipes::step(
       subclass = "spatial_clusterdist",
       terms = terms,
-      ref_lon = ref_lon,
-      ref_lat = ref_lat,
+      ref = ref,
       num_comp = num_comp,
       role = role,
       trained = trained,
@@ -98,15 +111,17 @@ step_spatial_clusterdist_new <-
 #' @export
 prep.step_spatial_clusterdist <- function(x, training, info = NULL, ...) {
   col_names <- recipes::recipes_eval_select(x$terms, training, info)
-  km <- kmeans(training[col_names],
-    centers = x$num_comp, algorithm = "Lloyd",
+
+  km <- kmeans(
+    training[col_names],
+    centers = x$num_comp,
+    algorithm = "Lloyd",
     iter.max = 1000
   )
 
   step_spatial_clusterdist_new(
     terms = x$terms,
-    ref_lon = x$ref_lon,
-    ref_lat = x$ref_lat,
+    ref = x$ref,
     num_comp = x$num_comp,
     role = x$role,
     trained = TRUE,
@@ -120,32 +135,21 @@ prep.step_spatial_clusterdist <- function(x, training, info = NULL, ...) {
 
 #' @export
 bake.step_spatial_clusterdist <- function(object, new_data, ...) {
-  geo_dist_2d_calc <- function(df, a, b) {
-    apply(df, 1, function(x, a, b, c) {
-      sqrt((x[1] - a)^2 + (x[2] - b)^2)
-    },
-    a = a, b = b
-    )
-  }
+  ref_colnames <- object$ref
+  ref_locations <- object$centers[ref_colnames]
 
-  cols <- c(object$ref_lon, object$ref_lat)
+  dist_vals <-
+    apply(ref_locations, 1, function(ref, data) {
+      euc_dist(x1 = data, x2 = ref)
+    }, data = new_data[, ref_colnames])
 
-  dist_vals <- geo_dist_2d_calc(
-    df = new_data[, cols],
-    a = object$centers[[object$ref_lon]],
-    b = object$centers[[object$ref_lat]]
+  dist_vals <- as.data.frame(dist_vals)
+
+  dist_vals <- setNames(
+    dist_vals,
+    paste0(object$name, seq_len(ncol(dist_vals)))
   )
-
-  if (inherits(dist_vals, "numeric")) {
-    dist_vals <- tibble(dist_vals)
-    names(dist_vals) <- object$name
-  } else if (inherits(dist_vals, "matrix")) {
-    dist_vals <- as.data.frame(t(dist_vals))
-    dist_vals <- setNames(
-      dist_vals,
-      paste0(object$name, seq_len(ncol(dist_vals)))
-    )
-  }
+  dist_vals <- as_tibble(dist_vals)
 
   bind_cols(new_data, dist_vals)
 }
@@ -154,8 +158,7 @@ print.step_spatial_clusterdist <-
   function(x, width = max(20, options()$width - 30), ...) {
     cat(
       "Geographical distances from",
-      format(x$ref_lat, digits = 10),
-      format(x$ref_lon, digits = 10),
+      format(x$ref, digits = 10),
       "\n"
     )
     invisible(x)
@@ -166,17 +169,19 @@ print.step_spatial_clusterdist <-
 #' @export
 tidy.step_spatial_clusterdist <- function(x, ...) {
   if (is_trained(x)) {
+    centres <- setNames(as.data.frame(t(x$centers)), paste0(x$name, seq_len(x$num_comp)))
+
     res <- tibble(
       terms = x$columns,
-      ref_latitude = x$ref_lat,
-      ref_longitude = x$ref_lon,
-      name = x$name
+      ref = paste(x$ref, collapse = ", "),
+      name = x$name,
     )
+    res <- bind_cols(res, centres)
+
   } else {
     res <- tibble(
       terms = recipes::sel2char(x$terms),
-      ref_latitude = x$ref_lat,
-      ref_longitude = x$ref_lon,
+      ref = x$ref,
       name = x$name
     )
   }

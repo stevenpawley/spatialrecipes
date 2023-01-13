@@ -5,8 +5,8 @@ test_that("test step_clusterdist", {
   rec_obj <- Sacramento %>%
     recipe(price ~ .) %>%
     step_spatial_clusterdist(all_numeric_predictors(),
-      ref_lon = "longitude",
-      ref_lat = "latitude", num_comp = 5
+      ref = c("longitude", "latitude"),
+      num_comp = 5
     )
 
   prepped <- prep(rec_obj)
